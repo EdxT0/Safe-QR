@@ -1,0 +1,593 @@
+
+# ============================================================
+# 1. Environment files / Secret configuration
+# ============================================================
+
+# General env files
+.env
+.env.*
+*.env
+
+# Allow example env files to be committed
+!.env.example
+!.env.sample
+!.env.template
+
+# Local frontend/backend environment variants
+**/.env
+**/.env.*
+**/*.env
+
+# Do not ignore example env files
+!**/.env.example
+!**/.env.sample
+!**/.env.template
+
+
+# ============================================================
+# 2. ASP.NET Core appsettings files
+# ============================================================
+# These often contain database connection strings, JWT secrets,
+# Azure Storage keys, SMTP credentials, API keys, etc.
+#
+# Recommended:
+# - Commit appsettings.example.json
+# - Keep real appsettings locally only
+# ============================================================
+
+**/appsettings.Local.json
+**/appsettings.Development.json
+**/appsettings.Production.json
+**/appsettings.Staging.json
+**/appsettings.Test.json
+**/appsettings.*.json
+
+# Optional stricter rule:
+# Uncomment this if you want to block ALL real appsettings files.
+# Then only commit appsettings.example.json.
+#
+# **/appsettings.json
+
+# Allow safe examples/templates
+!**/appsettings.example.json
+!**/appsettings.sample.json
+!**/appsettings.template.json
+
+
+# ============================================================
+# 3. ASP.NET Core launch settings
+# ============================================================
+# launchSettings.json can contain environment variables,
+# connection strings, local URLs, ports, secrets, etc.
+# ============================================================
+
+**/Properties/launchSettings.json
+!**/Properties/launchSettings.example.json
+
+
+# ============================================================
+# 4. .NET User Secrets / Local secret stores
+# ============================================================
+
+secrets.json
+**/secrets.json
+**/usersecrets.json
+**/UserSecrets/
+**/.microsoft/usersecrets/
+**/Microsoft/UserSecrets/
+
+
+# ============================================================
+# 5. Azure credentials, publish profiles, hosting secrets
+# ============================================================
+
+# Azure CLI local state
+.azure/
+**/.azure/
+
+# Azure Functions local settings
+local.settings.json
+**/local.settings.json
+
+# Azure publish profiles
+*.pubxml
+*.pubxml.user
+**/Properties/PublishProfiles/*.pubxml
+**/Properties/PublishProfiles/*.pubxml.user
+
+# Azure deployment/config files that may contain secrets
+azureProfile.json
+**/azureProfile.json
+.azureProfile
+**/.azureProfile
+
+# Azure service principal / credentials files
+azureauth.json
+**/azureauth.json
+azure-credentials.json
+**/azure-credentials.json
+service-principal.json
+**/service-principal.json
+sp.json
+**/sp.json
+
+# Azure storage / hosting config
+storage-account-key.json
+**/storage-account-key.json
+connectionstrings.json
+**/connectionstrings.json
+
+# Azure Static Web Apps local config
+swa-cli.config.json
+**/swa-cli.config.json
+
+# Allow safe examples
+!**/local.settings.example.json
+!**/azure-credentials.example.json
+!**/service-principal.example.json
+!**/connectionstrings.example.json
+!**/swa-cli.config.example.json
+
+
+# ============================================================
+# 6. Certificates, private keys, signing keys
+# ============================================================
+
+*.pem
+*.key
+*.crt
+*.cer
+*.pfx
+*.p12
+*.jks
+*.keystore
+*.asc
+*.gpg
+
+# SSH keys
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.ppk
+
+# JWT / encryption / signing keys
+jwt.key
+jwt.private.key
+jwt.public.key
+private.key
+public.key
+signing.key
+encryption.key
+**/keys/
+**/certs/
+**/certificates/
+
+# Allow documentation placeholders
+!**/keys/README.md
+!**/certs/README.md
+!**/certificates/README.md
+!*.example.pem
+!*.sample.pem
+!*.template.pem
+
+
+# ============================================================
+# 7. Database files and local storage
+# ============================================================
+
+*.db
+*.sqlite
+*.sqlite3
+*.mdf
+*.ldf
+*.bak
+*.dump
+*.sql.gz
+*.sql.zip
+
+# Local database folders
+**/Database/
+**/database/
+**/db/
+**/data/
+
+# But allow schema/migration documentation if needed
+!**/Database/README.md
+!**/database/README.md
+!**/db/README.md
+!**/data/README.md
+
+
+# ============================================================
+# 8. ASP.NET Core / .NET build output
+# ============================================================
+
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+
+# .NET generated files
+*.dll
+*.exe
+*.pdb
+*.mdb
+*.deps.json
+*.runtimeconfig.json
+*.runtimeconfig.dev.json
+
+# NuGet packages
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+project.lock.json
+project.assets.json
+artifacts/
+
+# Rider / ReSharper
+_ReSharper*/
+*.DotSettings.user
+
+# Test results / coverage
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+coverage.*
+*.opencover.xml
+*.cobertura.xml
+
+
+# ============================================================
+# 9. Visual Studio files
+# ============================================================
+
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code database/cache
+*.VC.db
+*.VC.VC.opendb
+ipch/
+.vshistory/
+
+
+# ============================================================
+# 10. Frontend React / Vite / Node dependencies
+# ============================================================
+
+node_modules/
+**/node_modules/
+
+# Production builds
+dist/
+build/
+out/
+.next/
+.nuxt/
+.svelte-kit/
+
+# Vite
+.vite/
+**/.vite/
+
+# Parcel / Webpack / other bundlers
+.cache/
+.parcel-cache/
+.webpack/
+.turbo/
+
+# npm/yarn/pnpm logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Package manager stores
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Keep lock files committed for reproducible builds
+# Do NOT ignore these unless you have a specific reason:
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+
+# ============================================================
+# 11. Frontend local config / secrets
+# ============================================================
+
+# React / Vite env files
+**/frontend/.env
+**/frontend/.env.*
+**/src/frontend/.env
+**/src/frontend/.env.*
+
+# Allow frontend examples
+!**/frontend/.env.example
+!**/frontend/.env.sample
+!**/frontend/.env.template
+!**/src/frontend/.env.example
+!**/src/frontend/.env.sample
+!**/src/frontend/.env.template
+
+
+# ============================================================
+# 12. Logs
+# ============================================================
+
+logs/
+*.log
+*.log.*
+log.txt
+debug.log
+error.log
+
+# ASP.NET logs
+**/Logs/
+**/logs/
+
+# IIS logs
+u_ex*.log
+
+
+# ============================================================
+# 13. Docker local overrides and secrets
+# ============================================================
+
+docker-compose.override.yml
+docker-compose.local.yml
+docker-compose.*.local.yml
+
+# Docker secret files
+docker-secrets/
+**/docker-secrets/
+secrets/
+**/secrets/
+
+# Allow examples
+!**/secrets/README.md
+!**/docker-secrets/README.md
+!docker-compose.example.yml
+!docker-compose.sample.yml
+
+
+# ============================================================
+# 14. Kubernetes / deployment secrets
+# ============================================================
+
+# Kubernetes secret manifests
+*-secret.yaml
+*-secrets.yaml
+secret.yaml
+secrets.yaml
+**/secret.yaml
+**/secrets.yaml
+**/*-secret.yaml
+**/*-secrets.yaml
+
+# Helm secret files
+secrets.values.yaml
+values.secret.yaml
+values.secrets.yaml
+**/secrets.values.yaml
+**/values.secret.yaml
+**/values.secrets.yaml
+
+# Allow templates/examples
+!**/secret.example.yaml
+!**/secrets.example.yaml
+!**/values.example.yaml
+!**/values.template.yaml
+
+
+# ============================================================
+# 15. Terraform / Infrastructure as Code secrets
+# ============================================================
+
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Terraform variable files often contain secrets
+*.tfvars
+*.tfvars.json
+
+# Allow examples
+!*.tfvars.example
+!*.tfvars.sample
+!*.tfvars.template
+
+
+# ============================================================
+# 16. Pulumi secrets
+# ============================================================
+
+Pulumi.*.yaml
+
+# Allow example Pulumi config
+!Pulumi.example.yaml
+!Pulumi.template.yaml
+
+
+# ============================================================
+# 17. AWS / Google Cloud / Other cloud credentials
+# Even if you mainly use Azure, this helps avoid accidental leaks.
+# ============================================================
+
+# AWS
+.aws/
+credentials
+config
+
+# Google Cloud
+.gcloud/
+application_default_credentials.json
+gcloud_credentials.json
+google-credentials.json
+service-account.json
+**/service-account.json
+
+# Firebase
+firebase-debug.log
+.firebaserc.local
+firebase-adminsdk*.json
+
+# Vercel / Netlify
+.vercel/
+.netlify/
+
+# Railway / Render / Supabase local files
+.railway/
+.render/
+.supabase/
+
+# Allow examples
+!**/service-account.example.json
+!**/google-credentials.example.json
+!**/firebase-adminsdk.example.json
+
+
+# ============================================================
+# 18. IDE / editor folders
+# ============================================================
+
+# VS Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.example.json
+!.vscode/launch.example.json
+!.vscode/tasks.example.json
+
+# JetBrains Rider / WebStorm
+.idea/
+*.iml
+
+# Sublime
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+
+# Emacs
+*~
+\#*\#
+
+
+# ============================================================
+# 19. OS generated files
+# ============================================================
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# Linux
+.directory
+.Trash-*
+
+
+# ============================================================
+# 20. Temporary files
+# ============================================================
+
+tmp/
+temp/
+.tmp/
+.temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+*.rej
+
+
+# ============================================================
+# 21. Archives / compressed files
+# ============================================================
+
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# Allow intentional release archives only if needed
+# !release/*.zip
+
+
+# ============================================================
+# 22. Generated documentation / reports
+# ============================================================
+
+# Optional: ignore generated docs output
+Documentation/generated/
+Documentation/output/
+
+# Do not ignore normal documentation files
+!Documentation/**/*.md
+!Documentation/**/*.pdf
+!Documentation/**/*.docx
+!Documentation/**/*.png
+!Documentation/**/*.jpg
+!Documentation/**/*.jpeg
+
+
+# ============================================================
+# 23. Security scanner output
+# ============================================================
+
+gitleaks-report.json
+trufflehog-report.json
+semgrep-report.json
+dependency-check-report.html
+dependency-check-report.json
+
+
+# ============================================================
+# 24. Misc local config files
+# ============================================================
+
+*.local
+*.local.json
+*.local.yaml
+*.local.yml
+*.config.local
+*.settings.local
+
+local.json
+local.yaml
+local.yml
+
+# Allow examples
+!*.local.example
+!*.local.sample
+!*.local.template
