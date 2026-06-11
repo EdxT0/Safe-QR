@@ -1,7 +1,8 @@
 'use client';
 /**
  * HistoryPage (/history)
- * Displays the user's scan history with filtering, searching, and deletion.
+ * Displays scan history with filtering, searching, and deletion.
+ * No authentication required — history is available to all users.
  */
 import { useState, useEffect } from 'react';
 import { useRouter }           from 'next/navigation';
@@ -34,7 +35,6 @@ export default function HistoryPage() {
     loadRecords();
   };
 
-  // Filtered + searched records
   const filtered = records.filter(r => {
     const matchQ = r.payload.toLowerCase().includes(query.toLowerCase()) ||
                    r.threatResult.riskLevel.includes(query.toLowerCase());
@@ -48,11 +48,9 @@ export default function HistoryPage() {
     malicious:  records.filter(r => r.threatResult.isMalicious()).length,
   };
 
-  const filterTabs = ['all', 'safe', 'suspicious', 'malicious'];
-
   return (
     <>
-      <Navbar activePath="/history" user={null} onLogout={() => {}} />
+      <Navbar activePath="/history" />
       <main className="page">
         <div className="page-title">📋 Scan History</div>
         <div className="page-sub">
@@ -66,7 +64,7 @@ export default function HistoryPage() {
           />
         )}
 
-        {/* Stats cards */}
+        {/* Stats overview */}
         <div className="stats-grid">
           {[
             ['✅', 'Safe',       stats.safe,       'safe'],
@@ -85,7 +83,7 @@ export default function HistoryPage() {
           ))}
         </div>
 
-        {/* Search */}
+        {/* Search bar */}
         <div className="search-bar">
           <span className="search-icon">🔍</span>
           <input
@@ -98,7 +96,7 @@ export default function HistoryPage() {
 
         {/* Filter tabs */}
         <div className="tabs">
-          {filterTabs.map(f => (
+          {['all', 'safe', 'suspicious', 'malicious'].map(f => (
             <button
               key={f}
               className={`tab ${filter === f ? 'active' : ''}`}
@@ -122,15 +120,11 @@ export default function HistoryPage() {
           />
         ) : (
           filtered.map(r => (
-            <ScanHistoryCard
-              key={r.scanId}
-              record={r}
-              onDelete={setDeleteId}
-            />
+            <ScanHistoryCard key={r.scanId} record={r} onDelete={setDeleteId} />
           ))
         )}
 
-        {/* Scan more CTA */}
+        {/* CTA when history is empty */}
         {!loading && records.length === 0 && (
           <div style={{ textAlign: 'center', marginTop: 24 }}>
             <button className="btn btn-primary" onClick={() => router.push('/scanner')}>

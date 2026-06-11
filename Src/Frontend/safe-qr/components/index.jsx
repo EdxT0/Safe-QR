@@ -2,13 +2,11 @@
 /**
  * Shared UI Components
  * Reusable stateless and stateful components used across all pages.
+ * Authentication removed — Safe QR operates without user login.
  */
-import Link          from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useUser }   from './UserContext';
-import { AuthService } from '../lib/services/AuthService';
+import Link from 'next/link';
 
-// ── Spinner ──────────────────────────────────────────────────────────────────
+// ── Spinner ───────────────────────────────────────────────────────────────────
 export function Spinner() {
   return <span className="spinner" />;
 }
@@ -112,15 +110,6 @@ export function ScanHistoryCard({ record, onDelete }) {
 
 // ── Navbar ────────────────────────────────────────────────────────────────────
 export function Navbar({ activePath }) {
-  const router = useRouter();
-  const { user, setUser } = useUser();
-
-  const handleLogout = () => {
-    AuthService.getInstance().logout();
-    setUser(null);
-    router.push('/scanner');
-  };
-
   const links = [
     { href: '/scanner', label: 'Scanner' },
     { href: '/upload',  label: 'Upload'  },
@@ -135,7 +124,7 @@ export function Navbar({ activePath }) {
         <div className="nav-logo-text">Safe<span>QR</span></div>
       </Link>
 
-      {/* Centre nav links */}
+      {/* Nav links */}
       <div className="nav-links">
         {links.map(l => (
           <Link
@@ -148,23 +137,8 @@ export function Navbar({ activePath }) {
         ))}
       </div>
 
-      {/* Right — user avatar or sign-in button */}
-      <div className="nav-right">
-        {user ? (
-          <>
-            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-              {user.getFirstName()}
-            </span>
-            <div className="nav-avatar" onClick={handleLogout} title="Sign out">
-              {user.getInitials()}
-            </div>
-          </>
-        ) : (
-          <Link href="/login" className="btn btn-secondary btn-sm">
-            Sign In
-          </Link>
-        )}
-      </div>
+      {/* Right spacer — kept for layout balance */}
+      <div className="nav-right" />
     </nav>
   );
 }

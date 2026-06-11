@@ -3,6 +3,7 @@
  * ResultPage (/result)
  * Displays the threat analysis result for the most recently scanned QR payload.
  * Reads the scan record from sessionStorage (set by ScannerPage or UploadPage).
+ * No authentication required — scan history is stored locally per session.
  */
 import { useState, useEffect } from 'react';
 import { useRouter }           from 'next/navigation';
@@ -14,11 +15,11 @@ import { ThreatResult }        from '../../lib/models/ThreatResult';
 export default function ResultPage() {
   const router = useRouter();
 
-  const [record,         setRecord]         = useState(null);
-  const [showModal,      setShowModal]      = useState(false);
-  const [sandboxOpen,    setSandboxOpen]    = useState(false);
-  const [saving,         setSaving]         = useState(false);
-  const [saved,          setSaved]          = useState(false);
+  const [record,      setRecord]      = useState(null);
+  const [showModal,   setShowModal]   = useState(false);
+  const [sandboxOpen, setSandboxOpen] = useState(false);
+  const [saving,      setSaving]      = useState(false);
+  const [saved,       setSaved]       = useState(false);
 
   const historySvc = ScanHistoryService.getInstance();
 
@@ -43,7 +44,7 @@ export default function ResultPage() {
   if (!record) {
     return (
       <>
-        <Navbar activePath="/result" user={null} onLogout={() => {}} />
+        <Navbar activePath="/result" />
         <main className="page" style={{ textAlign: 'center', paddingTop: 80 }}>
           <Spinner />
         </main>
@@ -52,6 +53,7 @@ export default function ResultPage() {
   }
 
   const { threatResult: result, payload, payloadType } = record;
+
   const glowColor = {
     safe:       'rgba(0,200,150,0.12)',
     suspicious: 'rgba(245,166,35,0.12)',
@@ -62,7 +64,7 @@ export default function ResultPage() {
 
   return (
     <>
-      <Navbar activePath="/result" user={null} onLogout={() => {}} />
+      <Navbar activePath="/result" />
       <main className="page">
         <div className="page-title">🛡 Safety Result</div>
         <div className="page-sub">Threat analysis complete. Review your result below.</div>
@@ -76,7 +78,7 @@ export default function ResultPage() {
           />
         )}
 
-        {/* Hero card */}
+        {/* Hero result card */}
         <div
           className="result-hero"
           style={{ backgroundImage: `radial-gradient(ellipse at 50% 0%, ${glowColor}, transparent 70%)` }}
@@ -98,22 +100,19 @@ export default function ResultPage() {
           </div>
         </div>
 
-        {/* Analysis details */}
+        {/* Analysis detail card */}
         <div className="card mt-4">
           <div className="label">Analysis Details</div>
           {[
-            ['📋', 'Payload type',     payloadType.toUpperCase(), null],
-            ['💬', 'Explanation',      result.explanation,        null],
-            ['✔️', 'Recommendation',   result.recommendation,     result.getRiskColor()],
+            ['📋', 'Payload type',   payloadType.toUpperCase(), null],
+            ['💬', 'Explanation',    result.explanation,        null],
+            ['✔️', 'Recommendation', result.recommendation,     result.getRiskColor()],
           ].map(([icon, label, val, color]) => (
             <div key={label} className="detail-row">
               <span className="detail-icon">{icon}</span>
               <div>
                 <div className="detail-label">{label}</div>
-                <div
-                  className="detail-val"
-                  style={color ? { color, fontWeight: 500 } : {}}
-                >
+                <div className="detail-val" style={color ? { color, fontWeight: 500 } : {}}>
                   {val}
                 </div>
               </div>
@@ -132,13 +131,10 @@ export default function ResultPage() {
           </div>
         </div>
 
-        {/* Sandbox preview — shown for suspicious/malicious URLs only */}
+        {/* Sandbox preview — suspicious/malicious URLs only */}
         {(result.isSuspicious() || result.isMalicious()) && payloadType === 'url' && (
           <div className="card mt-4">
-            <div
-              className="flex-between"
-              style={{ marginBottom: sandboxOpen ? 12 : 0 }}
-            >
+            <div className="flex-between" style={{ marginBottom: sandboxOpen ? 12 : 0 }}>
               <div>
                 <div className="label" style={{ marginBottom: 2 }}>Sandbox Preview</div>
                 <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
@@ -146,10 +142,7 @@ export default function ResultPage() {
                 </p>
               </div>
               {!sandboxOpen && (
-                <button
-                  className="btn btn-warn btn-sm"
-                  onClick={() => setShowModal(true)}
-                >
+                <button className="btn btn-warn btn-sm" onClick={() => setShowModal(true)}>
                   Open Sandbox
                 </button>
               )}
@@ -182,7 +175,7 @@ export default function ResultPage() {
           </button>
           {!saved ? (
             <button className="btn btn-secondary" onClick={handleSave} disabled={saving}>
-              {saving ? <Spinner /> : '💾 Save'}
+              {saving ? <Spinner /> : '💾 Save to History'}
             </button>
           ) : (
             <button className="btn btn-secondary" disabled style={{ color: 'var(--safe)' }}>
