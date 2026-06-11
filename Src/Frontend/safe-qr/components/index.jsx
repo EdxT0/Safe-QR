@@ -58,6 +58,38 @@ export function WarningModal({ url, onConfirm, onCancel }) {
   );
 }
 
+// ── ProceedModal — shown before opening a suspicious URL ─────────────────────
+export function ProceedModal({ url, onConfirm, onCancel }) {
+  return (
+    <div className="modal-overlay">
+      <div className="modal">
+        <div className="modal-title">⚠️ Proceed at Your Own Risk?</div>
+        <div className="modal-body">
+          This URL has been flagged as <strong style={{ color: 'var(--warn)' }}>Suspicious</strong>.
+          Opening it may expose you to potential threats. Safe QR cannot guarantee
+          the safety of this destination.
+          <br /><br />
+          <code style={{ fontFamily: 'var(--mono)', fontSize: 12,
+            wordBreak: 'break-all', color: 'var(--warn)' }}>
+            {url}
+          </code>
+          <br /><br />
+          Do you still want to open this link?
+        </div>
+        <div className="modal-actions">
+          <button className="btn btn-secondary btn-sm" onClick={onCancel}>
+            Cancel — Stay Safe
+          </button>
+          <button className="btn btn-sm" onClick={onConfirm}
+            style={{ background: 'var(--warn)', color: '#000' }}>
+            I Understand, Proceed
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── DeleteModal ───────────────────────────────────────────────────────────────
 export function DeleteModal({ onConfirm, onCancel }) {
   return (

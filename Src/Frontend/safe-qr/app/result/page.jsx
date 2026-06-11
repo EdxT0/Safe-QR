@@ -2,12 +2,17 @@
 /**
  * ResultPage (/result)
  * Displays the threat analysis result for the most recently scanned QR payload.
- * Reads the scan record from sessionStorage (set by ScannerPage or UploadPage).
- * No authentication required — scan history is stored locally per session.
+ *
+ * Open link behaviour:
+ *   Safe       → "Open Link" button opens directly in a new tab
+ *   Suspicious → "Proceed at Own Risk" button shows a warning modal before opening
+ *   Malicious  → No open button — link is blocked entirely
  */
 import { useState, useEffect } from 'react';
 import { useRouter }           from 'next/navigation';
-import { Navbar, RiskBadge, WarningModal, Spinner } from '../../components';
+import {
+  Navbar, RiskBadge, WarningModal, ProceedModal, Spinner,
+} from '../../components';
 import { ScanHistoryService }  from '../../lib/services/ScanHistoryService';
 import { ScanRecord }          from '../../lib/models/ScanRecord';
 import { ThreatResult }        from '../../lib/models/ThreatResult';
@@ -15,15 +20,15 @@ import { ThreatResult }        from '../../lib/models/ThreatResult';
 export default function ResultPage() {
   const router = useRouter();
 
-  const [record,      setRecord]      = useState(null);
-  const [showModal,   setShowModal]   = useState(false);
-  const [sandboxOpen, setSandboxOpen] = useState(false);
-  const [saving,      setSaving]      = useState(false);
-  const [saved,       setSaved]       = useState(false);
+  const [record,          setRecord]          = useState(null);
+  const [showSandbox,     setShowSandbox]     = useState(false);
+  const [sandboxOpen,     setSandboxOpen]     = useState(false);
+  const [showProceed,     setShowProceed]     = useState(false);
+  const [saving,          setSaving]          = useState(false);
+  const [saved,           setSaved]           = useState(false);
 
   const historySvc = ScanHistoryService.getInstance();
 
-  // Load result from sessionStorage on mount
   useEffect(() => {
     const raw = sessionStorage.getItem('safeqr_result');
     if (!raw) { router.replace('/scanner'); return; }
@@ -41,6 +46,18 @@ export default function ResultPage() {
     setSaved(true);
   };
 
+  /** Opens the URL safely in a new tab with security attributes. */
+  const openLink = (url) => {
+    const a = document.createElement('a');
+    a.href             = url;
+    a.target           = '_blank';
+    a.rel              = 'noopener noreferrer';  // prevents tab from accessing opener
+    a.referrerPolicy   = 'no-referrer';          // no referrer header sent to destination
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   if (!record) {
     return (
       <>
@@ -53,6 +70,7 @@ export default function ResultPage() {
   }
 
   const { threatResult: result, payload, payloadType } = record;
+  const isUrl = payloadType === 'url';
 
   const glowColor = {
     safe:       'rgba(0,200,150,0.12)',
@@ -70,11 +88,20 @@ export default function ResultPage() {
         <div className="page-sub">Threat analysis complete. Review your result below.</div>
 
         {/* Sandbox warning modal */}
-        {showModal && (
+        {showSandbox && (
           <WarningModal
             url={payload}
-            onConfirm={() => { setShowModal(false); setSandboxOpen(true); }}
-            onCancel={() => setShowModal(false)}
+            onConfirm={() => { setShowSandbox(false); setSandboxOpen(true); }}
+            onCancel={() => setShowSandbox(false)}
+          />
+        )}
+
+        {/* Proceed at own risk modal — suspicious URLs only */}
+        {showProceed && (
+          <ProceedModal
+            url={payload}
+            onConfirm={() => { setShowProceed(false); openLink(payload); }}
+            onCancel={() => setShowProceed(false)}
           />
         )}
 
@@ -100,7 +127,84 @@ export default function ResultPage() {
           </div>
         </div>
 
-        {/* Analysis detail card */}
+        {/* ── Open Link section ── */}
+        {isUrl && (
+          <div className="card mt-4">
+
+            {/* SAFE — direct open button */}
+            {result.isSafe() && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                <div>
+                  <div className="label" style={{ marginBottom: 2, color: 'var(--safe)' }}>
+                    ✅ Safe to Open
+                  </div>
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                    This link passed all safety checks and is safe to visit.
+                  </p>
+                </div>
+                <button
+                  className="btn btn-sm"
+                  style={{
+                    background: 'var(--safe)', color: '#000',
+                    flexShrink: 0, gap: 6,
+                    boxShadow: '0 0 16px rgba(0,200,150,0.3)',
+                  }}
+                  onClick={() => openLink(payload)}
+                >
+                  🔗 Open Link
+                </button>
+              </div>
+            )}
+
+            {/* SUSPICIOUS — proceed at own risk */}
+            {result.isSuspicious() && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                <div>
+                  <div className="label" style={{ marginBottom: 2, color: 'var(--warn)' }}>
+                    ⚠️ Proceed at Your Own Risk
+                  </div>
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                    This link is suspicious. We strongly advise using the sandbox preview first.
+                  </p>
+                </div>
+                <button
+                  className="btn btn-sm"
+                  style={{
+                    background: 'rgba(245,166,35,0.12)', color: 'var(--warn)',
+                    border: '1px solid rgba(245,166,35,0.4)',
+                    flexShrink: 0,
+                  }}
+                  onClick={() => setShowProceed(true)}
+                >
+                  ⚠️ Open Anyway
+                </button>
+              </div>
+            )}
+
+            {/* MALICIOUS — blocked, no open button */}
+            {result.isMalicious() && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                  background: 'rgba(232,50,90,0.12)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 20,
+                }}>🚫</div>
+                <div>
+                  <div className="label" style={{ marginBottom: 2, color: 'var(--danger)' }}>
+                    Link Blocked
+                  </div>
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                    This link has been identified as malicious. Opening it has been disabled for your safety.
+                  </p>
+                </div>
+              </div>
+            )}
+
+          </div>
+        )}
+
+        {/* Analysis details card */}
         <div className="card mt-4">
           <div className="label">Analysis Details</div>
           {[
@@ -123,26 +227,24 @@ export default function ResultPage() {
             <div>
               <div className="detail-label">Sources checked</div>
               <div className="chips">
-                {result.sources.map(s => (
-                  <span className="chip" key={s}>{s}</span>
-                ))}
+                {result.sources.map(s => <span className="chip" key={s}>{s}</span>)}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Sandbox preview — suspicious/malicious URLs only */}
-        {(result.isSuspicious() || result.isMalicious()) && payloadType === 'url' && (
+        {/* Sandbox preview — suspicious/malicious only */}
+        {(result.isSuspicious() || result.isMalicious()) && isUrl && (
           <div className="card mt-4">
             <div className="flex-between" style={{ marginBottom: sandboxOpen ? 12 : 0 }}>
               <div>
                 <div className="label" style={{ marginBottom: 2 }}>Sandbox Preview</div>
                 <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                  Inspect this URL safely in an isolated environment.
+                  Inspect this URL safely in an isolated environment before deciding.
                 </p>
               </div>
               {!sandboxOpen && (
-                <button className="btn btn-warn btn-sm" onClick={() => setShowModal(true)}>
+                <button className="btn btn-warn btn-sm" onClick={() => setShowSandbox(true)}>
                   Open Sandbox
                 </button>
               )}
@@ -164,7 +266,7 @@ export default function ResultPage() {
           </div>
         )}
 
-        {/* Action buttons */}
+        {/* Bottom action bar */}
         <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
           <button
             className="btn btn-primary"
@@ -175,7 +277,7 @@ export default function ResultPage() {
           </button>
           {!saved ? (
             <button className="btn btn-secondary" onClick={handleSave} disabled={saving}>
-              {saving ? <Spinner /> : '💾 Save to History'}
+              {saving ? <Spinner /> : '💾 Save'}
             </button>
           ) : (
             <button className="btn btn-secondary" disabled style={{ color: 'var(--safe)' }}>
