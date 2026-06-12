@@ -45,6 +45,7 @@ export default function HistoryPage() {
   const stats = {
     safe:       records.filter(r => r.threatResult.isSafe()).length,
     suspicious: records.filter(r => r.threatResult.isSuspicious()).length,
+    highRisk:   records.filter(r => r.threatResult.isHighRisk()).length,
     malicious:  records.filter(r => r.threatResult.isMalicious()).length,
   };
 
@@ -65,10 +66,11 @@ export default function HistoryPage() {
         )}
 
         {/* Stats overview */}
-        <div className="stats-grid">
+        <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
           {[
             ['✅', 'Safe',       stats.safe,       'safe'],
             ['⚠️', 'Suspicious', stats.suspicious, 'suspicious'],
+            ['🔶', 'High Risk',  stats.highRisk,   'high_risk'],
             ['🚫', 'Malicious',  stats.malicious,  'malicious'],
           ].map(([icon, label, count, lvl]) => (
             <div
@@ -96,13 +98,13 @@ export default function HistoryPage() {
 
         {/* Filter tabs */}
         <div className="tabs">
-          {['all', 'safe', 'suspicious', 'malicious'].map(f => (
+          {['all', 'safe', 'suspicious', 'high_risk', 'malicious'].map(f => (
             <button
               key={f}
               className={`tab ${filter === f ? 'active' : ''}`}
               onClick={() => setFilter(f)}
             >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
+              {f === 'high_risk' ? 'High Risk' : f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
         </div>

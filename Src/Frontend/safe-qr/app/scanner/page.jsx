@@ -73,13 +73,14 @@ export default function ScannerPage() {
   const demos = [
     { label: '🟢 Safe URL',   payload: 'https://www.google.com',                    badge: 'safe'       },
     { label: '🟡 Suspicious', payload: 'http://bit.ly/3xR9mQ2',                     badge: 'suspicious' },
+    { label: '🔶 High Risk',  payload: 'https://paypa1-secure-login.com/verify',    badge: 'high_risk'  },
     { label: '🔴 Malicious',  payload: 'http://phishing-example-malware.tk/steal',   badge: 'malicious'  },
     { label: '📶 Wi-Fi QR',   payload: 'WIFI:T:WPA;S:SafeQR-Office;P:securepass;;', badge: 'safe'       },
   ];
 
   return (
     <>
-      <Navbar activePath="/scanner" user={null} onLogout={() => {}} />
+      <Navbar activePath="/scanner" />
       <main className="page">
         <div className="page-title">📷 QR Scanner</div>
         <div className="page-sub">

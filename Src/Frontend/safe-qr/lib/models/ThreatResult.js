@@ -7,6 +7,7 @@ export class ThreatResult {
   static LEVELS = {
     SAFE:       'safe',
     SUSPICIOUS: 'suspicious',
+    HIGH_RISK:  'high_risk',
     MALICIOUS:  'malicious',
   };
 
@@ -28,6 +29,7 @@ export class ThreatResult {
 
   isSafe()       { return this.riskLevel === ThreatResult.LEVELS.SAFE; }
   isSuspicious() { return this.riskLevel === ThreatResult.LEVELS.SUSPICIOUS; }
+  isHighRisk()   { return this.riskLevel === ThreatResult.LEVELS.HIGH_RISK; }
   isMalicious()  { return this.riskLevel === ThreatResult.LEVELS.MALICIOUS; }
 
   /** Returns the hex colour associated with this risk level. */
@@ -35,6 +37,7 @@ export class ThreatResult {
     const map = {
       safe:       '#00C896',
       suspicious: '#F5A623',
+      high_risk:  '#E8590C',
       malicious:  '#E8325A',
     };
     return map[this.riskLevel] || '#888';
@@ -45,6 +48,7 @@ export class ThreatResult {
     const map = {
       safe:       'Safe',
       suspicious: 'Suspicious',
+      high_risk:  'High Risk',
       malicious:  'Malicious',
     };
     return map[this.riskLevel] || 'Unknown';
@@ -52,6 +56,6 @@ export class ThreatResult {
 
   /** Returns the emoji icon for this risk level. */
   getRiskIcon() {
-    return { safe: '✅', suspicious: '⚠️', malicious: '🚫' }[this.riskLevel] || '🔍';
+    return { safe: '✅', suspicious: '⚠️', high_risk: '🔶', malicious: '🚫' }[this.riskLevel] || '🔍';
   }
 }

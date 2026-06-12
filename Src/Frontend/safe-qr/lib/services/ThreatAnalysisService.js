@@ -54,57 +54,90 @@ export class ThreatAnalysisService {
 
   /**
    * Internal rule-based + simulated ML classification.
-   * TODO: replace with real API call to Python Flask ML microservice.
+   * Follows the Risk Classification Engine priority order:
+   *   1. Malicious  — Google Safe Browsing / VirusTotal confirms phishing, malware, or social engineering → Block Access
+   *   2. High Risk  — ONNX high-confidence phishing prediction AND heuristic signals (homoglyph, brand impersonation, suspicious TLD) → Warn User
+   *   3. Suspicious — ONNX borderline anomaly OR structural indicators (shorteners, new domains, encoded chars) → Sandbox Preview
+   *   4. Safe       — No threat signals across all analysis layers → Allow Access
+   * TODO: replace with real API call to ONNX-based ML engine + threat intel APIs.
    * @param {string} payload
    * @returns {ThreatResult}
    */
   #classifyPayload(payload) {
     const url = payload.toLowerCase();
 
+    // ── Priority 1: MALICIOUS — confirmed by threat intelligence ──
     const maliciousKeywords = [
       'phishing', 'malware', 'steal', 'hack',
       'free-prize', 'win?ref', '.tk', 'exploit',
     ];
-    const suspiciousKeywords = [
-      'bit.ly', 'tinyurl', 't.co', 'goo.gl',
-      'login-verify', 'free-', 'click-here',
-    ];
-
     if (maliciousKeywords.some(k => url.includes(k))) {
       return new ThreatResult({
         riskLevel:       ThreatResult.LEVELS.MALICIOUS,
         confidenceScore: 97,
         explanation:
-          'This URL contains patterns associated with phishing or malware distribution. ' +
-          'The domain has been flagged by VirusTotal and PhishTank.',
-        recommendation: 'Do not open this link. This QR code is dangerous.',
-        sources:         ['VirusTotal', 'PhishTank', 'ML Engine'],
+          'Google Safe Browsing or VirusTotal confirms the URL is phishing, malware, or social engineering.',
+        recommendation: 'Access blocked. Do not open this link — this QR code is confirmed dangerous.',
+        sources:         ['Google Safe Browsing', 'VirusTotal'],
         mlPrediction:    'malicious',
       });
     }
 
+    // ── Priority 2: HIGH RISK — ONNX high-confidence phishing + heuristic signals ──
+    const homoglyphPattern = /paypa1|amaz0n|g00gle|micr0soft|app1e|0utlook/;
+    const brandImpersonationKeywords = [
+      'secure-login', 'account-verify', 'login-verify', 'signin-secure', 'verify-account',
+    ];
+    const suspiciousTlds = ['.xyz', '.top', '.club', '.work', '.click'];
+
+    const hasHomoglyph = homoglyphPattern.test(url);
+    const hasBrandImpersonation = brandImpersonationKeywords.some(k => url.includes(k));
+    const hasSuspiciousTld = suspiciousTlds.some(tld => url.includes(tld));
+
+    if (hasHomoglyph || hasBrandImpersonation || hasSuspiciousTld) {
+      const signals = [];
+      if (hasHomoglyph) signals.push('homoglyph character substitution');
+      if (hasBrandImpersonation) signals.push('brand impersonation keyword pattern');
+      if (hasSuspiciousTld) signals.push('suspicious top-level domain');
+
+      return new ThreatResult({
+        riskLevel:       ThreatResult.LEVELS.HIGH_RISK,
+        confidenceScore: 85,
+        explanation:
+          `ONNX model returned a high-confidence phishing prediction. Heuristic analysis detected: ${signals.join(', ')}.`,
+        recommendation: 'Warning: this link shows strong phishing indicators. Avoid entering personal information.',
+        sources:         ['ONNX Model', 'Heuristic Engine'],
+        mlPrediction:    'high_risk',
+      });
+    }
+
+    // ── Priority 3: SUSPICIOUS — borderline ONNX prediction OR structural indicators ──
+    const suspiciousKeywords = [
+      'bit.ly', 'tinyurl', 't.co', 'goo.gl',
+      'free-', 'click-here',
+    ];
     if (suspiciousKeywords.some(k => url.includes(k)) || url.startsWith('http://')) {
       return new ThreatResult({
         riskLevel:       ThreatResult.LEVELS.SUSPICIOUS,
         confidenceScore: 71,
         explanation:
-          'This URL uses a URL shortener or an unencrypted HTTP connection. ' +
-          'The true destination cannot be fully verified.',
+          'ONNX model returned a borderline anomaly prediction. Structural indicators detected: URL shortener, new domain, or encoded characters.',
         recommendation:
-          'Exercise caution. Use the sandbox preview to inspect the destination before proceeding.',
-        sources:      ['Rule-Based Engine', 'ML Engine'],
+          'Sandbox preview recommended. Inspect the destination before proceeding.',
+        sources:      ['ONNX Model', 'Rule-Based Engine'],
         mlPrediction: 'suspicious',
       });
     }
 
+    // ── Priority 4: SAFE — no signals across all layers ──
     if (payload.startsWith('WIFI:')) {
       return new ThreatResult({
         riskLevel:       ThreatResult.LEVELS.SAFE,
         confidenceScore: 88,
         explanation:
-          'This QR code contains a Wi-Fi configuration payload. No malicious indicators detected.',
+          'No threat signals detected across all analysis layers. This QR code contains a Wi-Fi configuration payload.',
         recommendation:
-          'Verify the network name matches a trusted location before connecting.',
+          'Access allowed. Verify the network name matches a trusted location before connecting.',
         sources:      ['Payload Inspector'],
         mlPrediction: 'safe',
       });
@@ -114,10 +147,9 @@ export class ThreatAnalysisService {
       riskLevel:       ThreatResult.LEVELS.SAFE,
       confidenceScore: 94,
       explanation:
-        'This URL was checked against threat intelligence sources and machine learning models. ' +
-        'No threats were detected.',
-      recommendation: 'This QR code appears safe to open.',
-      sources:        ['VirusTotal', 'Google Safe Browsing', 'ML Engine'],
+        'No threat signals detected across all analysis layers — all sources return clean verdicts.',
+      recommendation: 'Access allowed. This QR code appears safe to open.',
+      sources:        ['Google Safe Browsing', 'VirusTotal', 'ONNX Model'],
       mlPrediction:   'safe',
     });
   }

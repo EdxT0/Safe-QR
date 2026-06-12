@@ -11,9 +11,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter }           from 'next/navigation';
 import {
-  Navbar, RiskBadge, WarningModal, ProceedModal, Spinner,
+  Navbar, RiskBadge, WarningModal, ProceedModal, FeedbackSection, Spinner,
 } from '../../components';
 import { ScanHistoryService }  from '../../lib/services/ScanHistoryService';
+import { FeedbackService }     from '../../lib/services/FeedbackService';
 import { ScanRecord }          from '../../lib/models/ScanRecord';
 import { ThreatResult }        from '../../lib/models/ThreatResult';
 
@@ -27,7 +28,8 @@ export default function ResultPage() {
   const [saving,          setSaving]          = useState(false);
   const [saved,           setSaved]           = useState(false);
 
-  const historySvc = ScanHistoryService.getInstance();
+  const historySvc  = ScanHistoryService.getInstance();
+  const feedbackSvc = FeedbackService.getInstance();
 
   useEffect(() => {
     const raw = sessionStorage.getItem('safeqr_result');
@@ -75,10 +77,11 @@ export default function ResultPage() {
   const glowColor = {
     safe:       'rgba(0,200,150,0.12)',
     suspicious: 'rgba(245,166,35,0.12)',
+    high_risk:  'rgba(232,89,12,0.12)',
     malicious:  'rgba(232,50,90,0.12)',
   }[result.riskLevel];
 
-  const heroIcon = { safe: '✅', suspicious: '⚠️', malicious: '🚫' }[result.riskLevel];
+  const heroIcon = { safe: '✅', suspicious: '⚠️', high_risk: '🔶', malicious: '🚫' }[result.riskLevel];
 
   return (
     <>
@@ -96,10 +99,11 @@ export default function ResultPage() {
           />
         )}
 
-        {/* Proceed at own risk modal — suspicious URLs only */}
+        {/* Proceed at own risk modal — suspicious/high risk URLs only */}
         {showProceed && (
           <ProceedModal
             url={payload}
+            riskLevel={result.riskLevel}
             onConfirm={() => { setShowProceed(false); openLink(payload); }}
             onCancel={() => setShowProceed(false)}
           />
@@ -181,6 +185,27 @@ export default function ResultPage() {
               </div>
             )}
 
+            {/* HIGH RISK — strong warning, proceed at own risk */}
+            {result.isHighRisk() && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                <div>
+                  <div className="label" style={{ marginBottom: 2, color: 'var(--high-risk)' }}>
+                    🔶 High Risk — Strong Warning
+                  </div>
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                    This link shows strong phishing indicators. Opening it is strongly discouraged.
+                  </p>
+                </div>
+                <button
+                  className="btn btn-high-risk btn-sm"
+                  style={{ flexShrink: 0 }}
+                  onClick={() => setShowProceed(true)}
+                >
+                  🔶 Open Anyway
+                </button>
+              </div>
+            )}
+
             {/* MALICIOUS — blocked, no open button */}
             {result.isMalicious() && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -233,8 +258,8 @@ export default function ResultPage() {
           </div>
         </div>
 
-        {/* Sandbox preview — suspicious/malicious only */}
-        {(result.isSuspicious() || result.isMalicious()) && isUrl && (
+        {/* Sandbox preview — suspicious/high risk/malicious only */}
+        {(result.isSuspicious() || result.isHighRisk() || result.isMalicious()) && isUrl && (
           <div className="card mt-4">
             <div className="flex-between" style={{ marginBottom: sandboxOpen ? 12 : 0 }}>
               <div>
@@ -265,6 +290,13 @@ export default function ResultPage() {
             )}
           </div>
         )}
+
+        {/* Anonymous feedback — report incorrect classification */}
+        <FeedbackSection
+          scanId={record.scanId}
+          url={payload}
+          onSubmit={(data) => feedbackSvc.submitFeedback(data)}
+        />
 
         {/* Bottom action bar */}
         <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>

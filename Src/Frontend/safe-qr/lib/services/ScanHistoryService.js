@@ -44,6 +44,17 @@ export class ScanHistoryService {
         }),
       }),
       new ScanRecord({
+        payload:     'https://paypa1-secure-login.com/verify',
+        payloadType: 'url',
+        scannedAt:   new Date(Date.now() - 216_000_000).toISOString(),
+        threatResult: new ThreatResult({
+          riskLevel: 'high_risk', confidenceScore: 85,
+          explanation: 'ONNX high-confidence phishing prediction with homoglyph and brand impersonation signals.',
+          recommendation: 'Warning: strong phishing indicators. Avoid entering personal information.',
+          sources: ['ONNX Model', 'Heuristic Engine'],
+        }),
+      }),
+      new ScanRecord({
         payload:     'http://phishing-example-malware.tk/steal',
         payloadType: 'url',
         scannedAt:   new Date(Date.now() - 259_200_000).toISOString(),
