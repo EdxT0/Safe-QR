@@ -1,3 +1,7 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="appsettings.development.json" />
+  </Folder>
   <Project Path="Safe Qr Backend/Safe Qr Backend.csproj" />
 </Solution>

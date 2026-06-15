@@ -13,7 +13,7 @@ namespace Safe_Qr_Backend.Services
             _session = session;
         }
 
-        public IReadOnlyList<PhishingResult> Predict(IReadOnlyList<string> urls)
+        public IReadOnlyList<ONNXPhishingResult> Predict(IReadOnlyList<string> urls)
         {
             var urlArray = urls.ToArray();
 
@@ -27,14 +27,14 @@ namespace Safe_Qr_Backend.Services
 
             var probSpan = results[1].GetTensorDataAsSpan<float>();
 
-            var predictions = new List<PhishingResult>(urls.Count);
+            var predictions = new List<ONNXPhishingResult>(urls.Count);
 
             for( int i = 0; i < urls.Count; i++)
             {
                 float legitProb = probSpan[i * 2 + 0];
                 float phishProb = probSpan[i * 2 + 1];
 
-                predictions.Add(new PhishingResult(
+                predictions.Add(new ONNXPhishingResult(
                     urls[i],
                     phishProb,
                     legitProb,
