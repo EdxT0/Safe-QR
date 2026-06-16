@@ -51,24 +51,24 @@ namespace Safe_Qr_Backend.Services.Google_Safe_Browsing
 
                 if (result?.matches == null || result.matches.Length == 0)
                 {
-                    return new AllServiceResult(false, ["no threat detected"]);
+                    return new AllServiceResult(ServiceResult.safe, ["no threat detected"]);
                 }
 
                 var threats = result.matches
                               .Select(m => m.threatType)
                               .Distinct().ToArray();
 
-                return new AllServiceResult(true, threats);
+                return new AllServiceResult(ServiceResult.malicious, threats);
             }
             catch (HttpRequestException ex)
             {
                 _logger.LogWarning(ex, "Safe Browsing API request failed for URL: {Url}", url);
-                return new AllServiceResult(IsThreat: false, reasons: ["UNKNOWN"]);
+                return new AllServiceResult(ServiceResult.highRisk, reasons: ["UNKNOWN"]);
 
             }catch( JsonException ex)
             {
                 _logger.LogWarning(ex, "Failed to deserialize Safe Browsing API response for URL: {Url}", url);
-                return new AllServiceResult(IsThreat: false, reasons: ["UNKNOWN"]);
+                return new AllServiceResult(ServiceResult.highRisk, reasons: ["UNKNOWN"]);
             }
         }
     }
