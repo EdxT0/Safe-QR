@@ -1,6 +1,7 @@
 ﻿using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using Safe_Qr_Backend.DTO;
+using System.Runtime.CompilerServices;
 namespace Safe_Qr_Backend.Services
 {
     public class Phishing_Url_ONNX
@@ -13,8 +14,9 @@ namespace Safe_Qr_Backend.Services
             _session = session;
         }
 
-        public IReadOnlyList<ONNXPhishingResult> Predict(IReadOnlyList<string> urls)
+        public async Task<IReadOnlyList<AllServiceResult>> Predict(IReadOnlyList<string> urls)
         {
+            var allServiceResultList = new List<AllServiceResult>();
             var urlArray = urls.ToArray();
 
             var inputTensor = new DenseTensor<string>(urlArray, [urlArray.Length]);
@@ -40,9 +42,33 @@ namespace Safe_Qr_Backend.Services
                     legitProb,
                     phishProb > 0.6 
                     ));
+            }for(int i =0; i < predictions.Count; i++)
+            {
+                float phishingProb = predictions[i].PhishingProbability;
+                allServiceResultList.Add(GetServiceResultWithProb(phishingProb));
             }
 
-            return predictions;
+            return allServiceResultList;
+        }
+
+        private static AllServiceResult GetServiceResultWithProb(float phishingProb)
+        {
+            if (phishingProb <= 40)
+            {
+                return new AllServiceResult(ServiceResult.safe, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
+            }
+            else if (phishingProb > 40 && phishingProb <= 60)
+            {
+                return new AllServiceResult(ServiceResult.suspicious, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
+            }
+            else if (phishingProb > 60 && phishingProb < 80)
+            {
+                return new AllServiceResult(ServiceResult.highRisk, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
+            }
+            else
+            {
+                return new AllServiceResult(ServiceResult.malicious, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
+            }
         }
     }
 }

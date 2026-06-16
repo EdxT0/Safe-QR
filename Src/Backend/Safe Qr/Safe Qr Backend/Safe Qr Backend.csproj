@@ -16,10 +16,6 @@
   <None Update="Models\model.onnx">
     <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
   </None>
-</ItemGroup>
-
-<ItemGroup>
-  <Folder Include="DTO\VirusTotalDTO\" />
 </ItemGroup>	
 	
 
