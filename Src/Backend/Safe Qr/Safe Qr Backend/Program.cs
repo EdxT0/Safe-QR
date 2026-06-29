@@ -1,7 +1,10 @@
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.ML.OnnxRuntime;
+using Safe_Qr_Backend.Data;
 using Safe_Qr_Backend.Services;
 using Safe_Qr_Backend.Services.Google_Safe_Browsing;
+using Safe_Qr_Backend.Services.VirusTotal;
 
 namespace Safe_Qr_Backend
 {
@@ -41,9 +44,13 @@ namespace Safe_Qr_Backend
 
                 return new InferenceSession(modelPath, options);
             });
+            builder.Services.AddDbContext<AppDbContext>(options =>
+                     options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+            
             builder.Services.AddScoped<Phishing_Url_ONNX>();
             builder.Services.AddScoped<EvaluateUrlService>();
             builder.Services.AddHttpClient<IGoogleSafeApiService,GoogleSafeApiService>();
+            builder.Services.AddHttpClient<IVirusTotalApiService, VirusTotalApiService>();
 
 
 
