@@ -2,10 +2,8 @@
 using Safe_Qr_Backend.DTO.VirusTotalDTO.analysisDTO;
 using Safe_Qr_Backend.DTO.VirusTotalDTO.CacheResponse;
 using Safe_Qr_Backend.DTO.VirusTotalDTO.New_url_response;
-using System.Security.AccessControl;
 using System.Text;
 using System.Text.Json;
-using System.Xml.Linq;
 
 namespace Safe_Qr_Backend.Services.VirusTotal
 {

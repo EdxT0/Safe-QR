@@ -12,10 +12,10 @@ namespace Safe_Qr_Backend.Services
             _phishing_Url_ONNX = phishing_Url_ONNX;
         }
 
-        public IReadOnlyList<ONNXPhishingResult> EvaluateUrl( IReadOnlyList<String> urls)
+        public async Task<IReadOnlyList<AllServiceResult>> EvaluateUrl( IReadOnlyList<String> urls)
         {
             
-            var ONNXResult = _phishing_Url_ONNX.Predict(urls);
+            var ONNXResult = await _phishing_Url_ONNX.Predict(urls);
 
             return ONNXResult;
         }
