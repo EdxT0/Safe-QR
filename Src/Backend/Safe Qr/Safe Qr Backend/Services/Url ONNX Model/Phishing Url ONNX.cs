@@ -1,6 +1,6 @@
 ﻿using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
-using Safe_Qr_Backend.DTO;
+using Safe_Qr_Backend.Result;
 using System.Runtime.CompilerServices;
 namespace Safe_Qr_Backend.Services
 {
@@ -9,6 +9,7 @@ namespace Safe_Qr_Backend.Services
 
 
         private readonly InferenceSession _session;
+        private readonly string vendor = "ONNX Model";
 
         public Phishing_Url_ONNX(InferenceSession session){
             _session = session;
@@ -45,29 +46,31 @@ namespace Safe_Qr_Backend.Services
             }for(int i =0; i < predictions.Count; i++)
             {
                 float phishingProb = predictions[i].PhishingProbability;
-                allServiceResultList.Add(GetServiceResultWithProb(phishingProb));
+                allServiceResultList.Add(GetServiceResultWithProb(phishingProb, vendor));
             }
 
             return allServiceResultList;
         }
 
-        private static AllServiceResult GetServiceResultWithProb(float phishingProb)
-        {
+        private static AllServiceResult GetServiceResultWithProb(float phishingProb, string vendor)
+        {       
+            
+
             if (phishingProb <= 40)
             {
-                return new AllServiceResult(ServiceResult.safe, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
+                return new AllServiceResult(vendor, ServiceResultEnum.safe, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
             }
             else if (phishingProb > 40 && phishingProb <= 60)
             {
-                return new AllServiceResult(ServiceResult.suspicious, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
+                return new AllServiceResult(vendor, ServiceResultEnum.suspicious, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
             }
             else if (phishingProb > 60 && phishingProb < 80)
             {
-                return new AllServiceResult(ServiceResult.highRisk, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
+                return new AllServiceResult(vendor, ServiceResultEnum.highRisk, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
             }
             else
             {
-                return new AllServiceResult(ServiceResult.malicious, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
+                return new AllServiceResult(vendor, ServiceResultEnum.malicious, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
             }
         }
     }

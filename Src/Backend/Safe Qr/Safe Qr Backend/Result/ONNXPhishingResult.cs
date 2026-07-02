@@ -1,4 +1,4 @@
-﻿namespace Safe_Qr_Backend.DTO
+﻿namespace Safe_Qr_Backend.Result
 {
     public record ONNXPhishingResult(
         string Url, 

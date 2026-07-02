@@ -1,7 +1,7 @@
-﻿using Safe_Qr_Backend.DTO;
-using Safe_Qr_Backend.DTO.VirusTotalDTO.analysisDTO;
+﻿using Safe_Qr_Backend.DTO.VirusTotalDTO.analysisDTO;
 using Safe_Qr_Backend.DTO.VirusTotalDTO.CacheResponse;
 using Safe_Qr_Backend.DTO.VirusTotalDTO.New_url_response;
+using Safe_Qr_Backend.Result;
 using System.Text;
 using System.Text.Json;
 
@@ -14,6 +14,7 @@ namespace Safe_Qr_Backend.Services.VirusTotal
         private readonly Logger<VirusTotalApiService> _logger;
         private readonly string _apiKey;
         private readonly string baseUrl = "https://www.virustotal.com/api/v3/";
+        private readonly string vendor = "Virus Total";
 
         public VirusTotalApiService(HttpClient httpClient, IConfiguration config, Logger<VirusTotalApiService> logger)
         {
@@ -25,12 +26,12 @@ namespace Safe_Qr_Backend.Services.VirusTotal
         }
 
 
-        public async Task<AllServiceResult> EvaluateUrl(string url)
+        public async Task<AllServiceResult> EvaluateUrl(string url, CancellationToken ct = default)
         {
             try
             {
                 // check cache
-                var cachedResult = await CheckUrlCached(url);
+                var cachedResult = await CheckUrlCached(url, ct);
                 if (cachedResult != null) {
                     var stats = cachedResult.data.attributes.last_analysis_stats;
                     int malicious = stats.malicious;
@@ -38,12 +39,12 @@ namespace Safe_Qr_Backend.Services.VirusTotal
                     int harmless = stats.harmless;
                     int undetected = stats.undetected;
 
-                    return BuildResult(malicious, suspicious, harmless, undetected);
+                    return BuildResult(malicious, suspicious, harmless, undetected, vendor);
                 }
                 //analyse url
-                string analyseId = await AnalyseUrl(url);
+                string analyseId = await AnalyseUrl(url, ct);
                 //fetch analysed result
-                var analysedResult = await GetAnalysisResult(analyseId);
+                var analysedResult = await GetAnalysisResult(analyseId, ct);
 
                 if (analysedResult != null)
                 {
@@ -53,57 +54,57 @@ namespace Safe_Qr_Backend.Services.VirusTotal
                     int harmless = stats.harmless;
                     int undetected = stats.undetected;
 
-                    return BuildResult(malicious,suspicious,harmless,undetected);
+                    return BuildResult(malicious,suspicious,harmless, undetected, vendor);
                 }
                 else
                 {
-                    return new AllServiceResult(ServiceResult.suspicious, [$"Virus Total API didn't manage to get result"]);
+                    return new AllServiceResult(vendor,ServiceResultEnum.suspicious, [$"Virus Total API didn't manage to get result"]);
                 }
 
             }
             catch (HttpRequestException ex)
             {
                 _logger.LogWarning(ex, "VirusTotal request failed for URL: {Url}", url);
-                return new AllServiceResult(ServiceResult.highRisk, ["UNKNOWN"]);
+                return new AllServiceResult(vendor,ServiceResultEnum.highRisk, ["UNKNOWN"]);
             }
             catch (JsonException ex)
             {
                 _logger.LogError(ex, "VirusTotal deserialization failed for URL: {Url}", url);
-                return new AllServiceResult(ServiceResult.highRisk, ["UNKNOWN"]);
+                return new AllServiceResult(vendor,ServiceResultEnum.highRisk, ["UNKNOWN"]);
             }
         }
-        private AllServiceResult BuildResult(int malicious, int suspicious, int harmless, int undetected)
+        private AllServiceResult BuildResult(int malicious, int suspicious, int harmless, int undetected, string vendor)
         {
             if (malicious > 0)
-                return new AllServiceResult(ServiceResult.malicious,
+                return new AllServiceResult(vendor, ServiceResultEnum.malicious,
                     [$"VirusTotal: {malicious} engine(s) flagged as malicious"]);
 
             if (suspicious > 0)
-                return new AllServiceResult(ServiceResult.suspicious,
+                return new AllServiceResult(vendor, ServiceResultEnum.suspicious,
                     [$"VirusTotal: {suspicious} engine(s) flagged as suspicious"]);
 
             if (harmless > 0)
-                return new AllServiceResult(ServiceResult.safe,
+                return new AllServiceResult(vendor,ServiceResultEnum.safe,
                     [$"VirusTotal: {harmless} engine(s) confirmed safe"]);
 
-            return new AllServiceResult(ServiceResult.suspicious,
+            return new AllServiceResult(vendor,ServiceResultEnum.suspicious,
                 [$"VirusTotal: {undetected} engine(s) undetected — no verdict"]);
         }
 
-        private async Task<CacheResponseDTO?> CheckUrlCached(string url)
+        private async Task<CacheResponseDTO?> CheckUrlCached(string url, CancellationToken ct = default)
         {
             var urlId = ConvertUrlToBase64(url);
             var endpoint = $"{baseUrl}/urls/{urlId}";
 
 
-            var response = await _httpClient.GetAsync(endpoint);
+            var response = await _httpClient.GetAsync(endpoint, ct);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
                 return null;
             }
             response.EnsureSuccessStatusCode();
-            var result = await response.Content.ReadFromJsonAsync<CacheResponseDTO>();
+            var result = await response.Content.ReadFromJsonAsync<CacheResponseDTO>(ct);
 
             return result;
 
@@ -118,22 +119,24 @@ namespace Safe_Qr_Backend.Services.VirusTotal
             return Convert.ToBase64String(bytes).Replace('+', '-').Replace('/', '_').TrimEnd('=');
         }
 
-        private async Task<string> AnalyseUrl(string url)
+        private async Task<string> AnalyseUrl(string url, CancellationToken ct = default)
         {
             var formData = new FormUrlEncodedContent(new[]
             {
                 new KeyValuePair<string,string>("url", url)
             });
             var endpoint = $"{baseUrl}/urls";
-            var response = await _httpClient.PostAsync(endpoint, formData);
+            var response = await _httpClient.PostAsync(endpoint, formData, ct);
             response.EnsureSuccessStatusCode();
 
-            var result = await response.Content.ReadFromJsonAsync<AnalysisIdResponse>();
-            string analyseId = result.data.id;
+            var result = await response.Content.ReadFromJsonAsync<AnalysisIdResponse>(ct) ?? throw new InvalidOperationException(
+            "VirusTotal returned a 2xx response but the body could not be deserialized as expected.");
+            string analyseId = result.data.id ?? throw new InvalidOperationException(
+            "VirusTotal returned a successful response without an analysis ID — check the response shape against AnalysisIdResponse.");
             return analyseId;
         }
 
-        private async Task<AnalysisResponse?> GetAnalysisResult(string analysisId)
+        private async Task<AnalysisResponse?> GetAnalysisResult(string analysisId, CancellationToken ct = default)
         {
 
             var endpoint = $"{baseUrl}/analyses/{analysisId}";
@@ -147,7 +150,7 @@ namespace Safe_Qr_Backend.Services.VirusTotal
                 attempt++;
                 await Task.Delay(3000);
 
-                var response = await _httpClient.GetAsync(endpoint);
+                var response = await _httpClient.GetAsync(endpoint, ct);
                 response.EnsureSuccessStatusCode();
                 var result = await  response.Content.ReadFromJsonAsync<AnalysisResponse>();
                 if(result == null)
