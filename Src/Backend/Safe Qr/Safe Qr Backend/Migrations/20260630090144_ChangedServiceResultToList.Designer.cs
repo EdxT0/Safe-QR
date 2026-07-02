@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Safe_Qr_Backend.Data;
@@ -11,9 +12,11 @@ using Safe_Qr_Backend.Data;
 namespace Safe_Qr_Backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260630090144_ChangedServiceResultToList")]
+    partial class ChangedServiceResultToList
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -58,9 +61,6 @@ namespace Safe_Qr_Backend.Migrations
                         });
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Url")
-                        .IsUnique();
 
                     b.ToTable("UrlReport", (string)null);
                 });

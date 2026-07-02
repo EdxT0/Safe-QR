@@ -1,7 +1,7 @@
-﻿using Safe_Qr_Backend.DTO;
-using Safe_Qr_Backend.DTO.GoogleSafeBrowsingDTO;
+﻿using Safe_Qr_Backend.DTO.GoogleSafeBrowsingDTO;
 using Safe_Qr_Backend.DTO.GoogleSafeBrowsingDTO.RequestDTO;
 using Safe_Qr_Backend.DTO.GoogleSafeBrowsingDTO.Response;
+using Safe_Qr_Backend.Result;
 using System.Text.Json;
 
 namespace Safe_Qr_Backend.Services.Google_Safe_Browsing
@@ -13,6 +13,7 @@ namespace Safe_Qr_Backend.Services.Google_Safe_Browsing
         private readonly ILogger<GoogleSafeApiService> _logger;
         private readonly string clientInfo = "safe-qr-fyp";
         private readonly string clientVersion = "1.0.0";
+        private readonly string vendor = "google safe api";
 
 
         public GoogleSafeApiService(HttpClient httpClient, IConfiguration config, Logger<GoogleSafeApiService> logger)
@@ -29,7 +30,7 @@ namespace Safe_Qr_Backend.Services.Google_Safe_Browsing
                 "UNWANTED_SOFTWARE"
         ];
 
-        public async Task<AllServiceResult> EvaluateUrl(string url)
+        public async Task<AllServiceResult> EvaluateUrl(string url, CancellationToken ct = default)
         {
             var endpoint = $"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={_apiKey}";
 
@@ -45,30 +46,30 @@ namespace Safe_Qr_Backend.Services.Google_Safe_Browsing
 
             try
             {
-                var response = await _httpClient.PostAsJsonAsync(endpoint, payload);
+                var response = await _httpClient.PostAsJsonAsync(endpoint, payload, ct);
                 response.EnsureSuccessStatusCode();
-                var result = await response.Content.ReadFromJsonAsync<GoogleSafeApiResponse>();
+                var result = await response.Content.ReadFromJsonAsync<GoogleSafeApiResponse>(ct);
 
                 if (result?.matches == null || result.matches.Length == 0)
                 {
-                    return new AllServiceResult(ServiceResult.safe, ["no threat detected"]);
+                    return new AllServiceResult(vendor, ServiceResultEnum.safe, ["no threat detected"]);
                 }
 
                 var threats = result.matches
                               .Select(m => m.threatType)
                               .Distinct().ToArray();
 
-                return new AllServiceResult(ServiceResult.malicious, threats);
+                return new AllServiceResult(vendor, ServiceResultEnum.malicious, threats);
             }
             catch (HttpRequestException ex)
             {
                 _logger.LogWarning(ex, "Safe Browsing API request failed for URL: {Url}", url);
-                return new AllServiceResult(ServiceResult.highRisk, reasons: ["UNKNOWN"]);
+                return new AllServiceResult(vendor, ServiceResultEnum.highRisk, reasons: ["UNKNOWN"]);
 
             }catch( JsonException ex)
             {
                 _logger.LogWarning(ex, "Failed to deserialize Safe Browsing API response for URL: {Url}", url);
-                return new AllServiceResult(ServiceResult.highRisk, reasons: ["UNKNOWN"]);
+                return new AllServiceResult(vendor, ServiceResultEnum.highRisk, reasons: ["UNKNOWN"]);
             }
         }
     }
