@@ -17,7 +17,7 @@ namespace Safe_Qr_Backend.Repository.UrlReportRepo
         }
 
 
-        public async Task<bool> AddUrlAsync(string url, List<ServiceResult> serviceResults, CancellationToken ct)
+        public async Task<RepoResult<UrlReport>> AddUrlAsync(string url, List<ServiceResult> serviceResults, CancellationToken ct)
         {
             bool IsUniqueConstraintViolation(DbUpdateException ex)
             {
@@ -43,17 +43,17 @@ namespace Safe_Qr_Backend.Repository.UrlReportRepo
                 await _appDbContext.SaveChangesAsync(ct);
             }catch(DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
             {
-                return false;
+                return RepoResult<UrlReport>.Failure(RepoResultEnum.Duplicate);
             }
 
 
             
 
 
-            return true;
+            return RepoResult<UrlReport>.Succeeded(urlReport, RepoResultEnum.Successful);
         }
 
-        public async Task<bool> UpdateUrlAsync(string url, List<ServiceResult> ServiceResults, CancellationToken ct)
+        public async Task<RepoResult<UrlReport>> UpdateUrlAsync(string url, List<ServiceResult> ServiceResults, CancellationToken ct)
         {
             var existing = await FindByUrlAsync(url, ct);
             if (existing != null)
@@ -61,34 +61,34 @@ namespace Safe_Qr_Backend.Repository.UrlReportRepo
                 existing.Results = ServiceResults;
 
                 await _appDbContext.SaveChangesAsync(ct);
-                return true;
+                return RepoResult<UrlReport>.Succeeded(existing, RepoResultEnum.Successful);
             }
-            return false;
+            return RepoResult<UrlReport>.Failure(RepoResultEnum.Failed); ;
 
         }
 
-        public async Task<bool> DeleteUrlAsync(string url, CancellationToken ct)
+        public async Task<RepoResult> DeleteUrlAsync(string url, CancellationToken ct)
         {
             var existing = await FindByUrlAsync(url, ct);
             if (existing != null)
             {
                 _appDbContext.UrlReport.Remove(existing);
                 await _appDbContext.SaveChangesAsync(ct);
-                return true;
+                return RepoResult<UrlReport>.Succeeded(RepoResultEnum.Successful); ;
             }
-            return false;
+            return RepoResult<UrlReport>.Failure(RepoResultEnum.Failed); ;
         }
 
-        public async Task<bool> FlagOrUnflagUrlAsync(string url, bool flag, CancellationToken ct)
+        public async Task<RepoResult<UrlReport>> FlagOrUnflagUrlAsync(string url, bool flag, CancellationToken ct)
         {
             var existing = await FindByUrlAsync(url, ct);
             if (existing != null)
             {
                 existing.FlaggedForWrong = flag;
                 await _appDbContext.SaveChangesAsync(ct);
-                return true;
+                return RepoResult<UrlReport>.Succeeded(existing, RepoResultEnum.Successful); ;
             }
-            return false;
+            return RepoResult<UrlReport>.Failure(RepoResultEnum.Failed); ;
         }
 
         public async Task<List<ServiceResult>> GetAllServiceResultByUrlAsync(string url, CancellationToken ct)
