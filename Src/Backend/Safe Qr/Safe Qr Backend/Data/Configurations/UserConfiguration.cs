@@ -16,6 +16,9 @@ namespace Safe_Qr_Backend.Data.Configurations
         
             builder.Property( u => u.Enabled)
                 .HasDefaultValue(true);
+
+            builder.Property(u => u.RowVersion).IsRowVersion();
+
         }
     }
 }

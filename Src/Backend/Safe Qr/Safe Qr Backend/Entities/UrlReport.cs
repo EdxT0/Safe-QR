@@ -1,4 +1,5 @@
 ﻿using Safe_Qr_Backend.Result;
+using System.ComponentModel.DataAnnotations;
 
 namespace Safe_Qr_Backend.Entities
 {
@@ -10,5 +11,8 @@ namespace Safe_Qr_Backend.Entities
         public required List<ServiceResult> Results { get; set; } = new List<ServiceResult>();
 
         public bool FlaggedForWrong { get; set; } = false;
+
+        public uint RowVersion { get; set; }
+
     }
 }

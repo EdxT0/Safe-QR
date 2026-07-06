@@ -21,7 +21,7 @@ namespace Safe_Qr_Backend.Data.Configurations
             {
                 b.ToJson();
 
-                b.Property(r => r.vendor).IsRequired();
+                b.Property(r => r.vendor).HasConversion<string>().IsRequired();
                 b.Property(r => r.serviceResultVerdict).HasConversion<string>().IsRequired();
                 b.Property(r => r.reasons).IsRequired();
             });
@@ -31,6 +31,8 @@ namespace Safe_Qr_Backend.Data.Configurations
             builder.Property(u => u.FlaggedForWrong)
                 .IsRequired()
                 .HasDefaultValue(false);
+
+            builder.Property(u => u.RowVersion).IsRowVersion();
         }
     }
 }
