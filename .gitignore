@@ -190,7 +190,6 @@ encryption.key
 **/Database/
 **/database/
 **/db/
-**/data/
 
 # But allow schema/migration documentation if needed
 !**/Database/README.md
