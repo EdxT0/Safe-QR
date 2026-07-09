@@ -7,5 +7,6 @@ namespace Safe_Qr_Backend.Controllers
     [ApiController]
     public class ScanController : ControllerBase
     {
+
     }
 }

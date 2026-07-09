@@ -9,18 +9,18 @@ namespace Safe_Qr_Backend.Services
 
 
         private readonly InferenceSession _session;
-        private readonly string vendor = "ONNX Model";
+        private readonly VendorEnum vendor = VendorEnum.ONNX;
 
-        public Phishing_Url_ONNX(InferenceSession session){
+        public Phishing_Url_ONNX(InferenceSession session)
+        {
             _session = session;
         }
 
-        public async Task<IReadOnlyList<AllServiceResult>> Predict(IReadOnlyList<string> urls)
+        public async Task<ServiceScanResult> Predict(string url)
         {
-            var allServiceResultList = new List<AllServiceResult>();
-            var urlArray = urls.ToArray();
+            var allServiceResultList = new List<ServiceScanResult>();
 
-            var inputTensor = new DenseTensor<string>(urlArray, [urlArray.Length]);
+            var inputTensor = new DenseTensor<string>(new string[] { url }, new int[] { 1 });
             using var inputOrtValue = OrtValue.CreateFromStringTensor(inputTensor);
 
             string[] inputNames = ["inputs"];
@@ -30,47 +30,35 @@ namespace Safe_Qr_Backend.Services
 
             var probSpan = results[1].GetTensorDataAsSpan<float>();
 
-            var predictions = new List<ONNXPhishingResult>(urls.Count);
 
-            for( int i = 0; i < urls.Count; i++)
-            {
-                float legitProb = probSpan[i * 2 + 0];
-                float phishProb = probSpan[i * 2 + 1];
+            float legitProb = probSpan[0];
+            float phishProb = probSpan[1];
 
-                predictions.Add(new ONNXPhishingResult(
-                    urls[i],
-                    phishProb,
-                    legitProb,
-                    phishProb > 0.6 
-                    ));
-            }for(int i =0; i < predictions.Count; i++)
-            {
-                float phishingProb = predictions[i].PhishingProbability;
-                allServiceResultList.Add(GetServiceResultWithProb(phishingProb, vendor));
-            }
+            return GetServiceResultWithProb(phishProb, vendor);
 
-            return allServiceResultList;
+
+
         }
 
-        private static AllServiceResult GetServiceResultWithProb(float phishingProb, string vendor)
-        {       
-            
+        private static ServiceScanResult GetServiceResultWithProb(float phishingProb, VendorEnum vendor)
+        {
+
 
             if (phishingProb <= 40)
             {
-                return new AllServiceResult(vendor, ServiceResultEnum.safe, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
+                return new ServiceScanResult(vendor, ServiceResultEnum.safe, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
             }
             else if (phishingProb > 40 && phishingProb <= 60)
             {
-                return new AllServiceResult(vendor, ServiceResultEnum.suspicious, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
+                return new ServiceScanResult(vendor, ServiceResultEnum.suspicious, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
             }
             else if (phishingProb > 60 && phishingProb < 80)
             {
-                return new AllServiceResult(vendor, ServiceResultEnum.highRisk, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
+                return new ServiceScanResult(vendor, ServiceResultEnum.highRisk, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
             }
             else
             {
-                return new AllServiceResult(vendor, ServiceResultEnum.malicious, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
+                return new ServiceScanResult(vendor, ServiceResultEnum.malicious, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
             }
         }
     }

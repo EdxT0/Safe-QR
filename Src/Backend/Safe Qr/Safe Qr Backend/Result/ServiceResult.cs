@@ -2,7 +2,7 @@
 
 namespace Safe_Qr_Backend.Result
 {
-    public record ServiceResult(string vendor, ServiceResultEnum serviceResultVerdict, string[] reasons);
+    public record ServiceResult(VendorEnum vendor, ServiceResultEnum serviceResultVerdict, string[] reasons);
    
 
 }
