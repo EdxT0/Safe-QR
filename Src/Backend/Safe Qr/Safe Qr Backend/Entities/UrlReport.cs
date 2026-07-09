@@ -1,5 +1,4 @@
 ﻿using Safe_Qr_Backend.Result;
-using System.ComponentModel.DataAnnotations;
 
 namespace Safe_Qr_Backend.Entities
 {

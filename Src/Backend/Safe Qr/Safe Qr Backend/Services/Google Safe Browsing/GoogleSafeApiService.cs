@@ -13,10 +13,10 @@ namespace Safe_Qr_Backend.Services.Google_Safe_Browsing
         private readonly ILogger<GoogleSafeApiService> _logger;
         private readonly string clientInfo = "safe-qr-fyp";
         private readonly string clientVersion = "1.0.0";
-        private readonly string vendor = "google safe api";
+        private readonly VendorEnum vendor = VendorEnum.Google;
 
 
-        public GoogleSafeApiService(HttpClient httpClient, IConfiguration config, Logger<GoogleSafeApiService> logger)
+        public GoogleSafeApiService(HttpClient httpClient, IConfiguration config, ILogger<GoogleSafeApiService> logger)
         {
             _httpClient = httpClient;
             _apiKey = config["ApiKeys:SafeBrowsing"] ?? throw new InvalidOperationException("Safe Browsing API key is not configured.");
@@ -30,7 +30,7 @@ namespace Safe_Qr_Backend.Services.Google_Safe_Browsing
                 "UNWANTED_SOFTWARE"
         ];
 
-        public async Task<AllServiceResult> EvaluateUrl(string url, CancellationToken ct = default)
+        public async Task<ServiceScanResult> EvaluateUrl(string url, CancellationToken ct = default)
         {
             var endpoint = $"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={_apiKey}";
 
@@ -52,24 +52,24 @@ namespace Safe_Qr_Backend.Services.Google_Safe_Browsing
 
                 if (result?.matches == null || result.matches.Length == 0)
                 {
-                    return new AllServiceResult(vendor, ServiceResultEnum.safe, ["no threat detected"]);
+                    return new ServiceScanResult(vendor, ServiceResultEnum.safe, ["no threat detected"]);
                 }
 
                 var threats = result.matches
                               .Select(m => m.threatType)
                               .Distinct().ToArray();
 
-                return new AllServiceResult(vendor, ServiceResultEnum.malicious, threats);
+                return new ServiceScanResult(vendor, ServiceResultEnum.malicious, threats);
             }
             catch (HttpRequestException ex)
             {
                 _logger.LogWarning(ex, "Safe Browsing API request failed for URL: {Url}", url);
-                return new AllServiceResult(vendor, ServiceResultEnum.highRisk, reasons: ["UNKNOWN"]);
+                return new ServiceScanResult(vendor, ServiceResultEnum.highRisk, reasons: ["UNKNOWN"]);
 
             }catch( JsonException ex)
             {
                 _logger.LogWarning(ex, "Failed to deserialize Safe Browsing API response for URL: {Url}", url);
-                return new AllServiceResult(vendor, ServiceResultEnum.highRisk, reasons: ["UNKNOWN"]);
+                return new ServiceScanResult(vendor, ServiceResultEnum.highRisk, reasons: ["UNKNOWN"]);
             }
         }
     }

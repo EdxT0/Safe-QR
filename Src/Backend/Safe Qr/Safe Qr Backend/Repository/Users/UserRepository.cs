@@ -16,7 +16,7 @@ namespace Safe_Qr_Backend.Repository.Repository.UserRepo
             _appDbContext = appDbContext;
         }
 
-        public async Task<RepoResult<User>> CreateUserAsync(User user, CancellationToken ct)
+        public async Task<Result<User>> CreateUserAsync(User user, CancellationToken ct)
         {
 
             bool DBErrorIsUniqueConstraint(DbUpdateException ex)
@@ -33,21 +33,21 @@ namespace Safe_Qr_Backend.Repository.Repository.UserRepo
             try
             {
                 await _appDbContext.SaveChangesAsync(ct);
-                return RepoResult<User>.Succeeded(user, RepoResultEnum.Successful);
+                return Result<User>.Succeeded(user, ResultEnum.Successful);
             }catch(DbUpdateException ex) when (DBErrorIsUniqueConstraint(ex))
             {
-                return RepoResult<User>.Failure(RepoResultEnum.Duplicate);
+                return Result<User>.Failure(ResultEnum.Duplicate);
             }
 
-            
+
         }
 
-        public async Task<RepoResult<User>> UpdateUserAsync(int id, string name, string email, CancellationToken ct)
+        public async Task<Result<User>> UpdateUserAsync(int id, string name, string email, CancellationToken ct)
         {
             var existing = await GetExistingAsync(id, ct);
             if(existing == null)
             {
-                return RepoResult<User>.Failure(RepoResultEnum.DoesNotExist);
+                return Result<User>.Failure(ResultEnum.DoesNotExist);
             }
             if (!string.IsNullOrWhiteSpace(name))
             {
@@ -55,24 +55,38 @@ namespace Safe_Qr_Backend.Repository.Repository.UserRepo
             }
             if (!string.IsNullOrWhiteSpace(email))
             {
-                existing.email = email;
+                existing.Email = email;
             }
 
-            await _appDbContext.SaveChangesAsync(ct);
-            return RepoResult<User>.Succeeded(existing, RepoResultEnum.Successful);
+            try
+            {
+                await _appDbContext.SaveChangesAsync(ct);
+                return Result<User>.Succeeded(existing, ResultEnum.Successful);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Result<User>.Failure(ResultEnum.Conflict);
+            }
         }
 
-        public async Task<RepoResult<User>> SetUserEnabledAsync(int id, bool isEnabled, CancellationToken ct)
+        public async Task<Result<User>> SetUserEnabledAsync(int id, bool isEnabled, CancellationToken ct)
         {
             var existing = await GetExistingAsync(id, ct);
             if (existing == null)
             {
-                return RepoResult<User>.Failure(RepoResultEnum.DoesNotExist);
+                return Result<User>.Failure(ResultEnum.DoesNotExist);
             }
             existing.Enabled = isEnabled;
 
-            await _appDbContext.SaveChangesAsync(ct);
-            return RepoResult<User>.Succeeded(existing, RepoResultEnum.Successful);
+            try
+            {
+                await _appDbContext.SaveChangesAsync(ct);
+                return Result<User>.Succeeded(existing, ResultEnum.Successful);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Result<User>.Failure(ResultEnum.Conflict);
+            }
         
         }
 
@@ -84,6 +98,11 @@ namespace Safe_Qr_Backend.Repository.Repository.UserRepo
         public async Task<User?> GetUserByUsernameAsync(String name, CancellationToken ct)
         {
             return await _appDbContext.User.AsNoTracking().FirstOrDefaultAsync(u => u.Name == name, ct);
+        }
+
+        public async Task<User?> GetUserByEmailAsync(string email, CancellationToken ct)
+        {
+            return await _appDbContext.User.AsNoTracking().FirstOrDefaultAsync(u => u.Email == email, ct);
         }
 
         private async Task<User?> GetExistingAsync(int id, CancellationToken ct)

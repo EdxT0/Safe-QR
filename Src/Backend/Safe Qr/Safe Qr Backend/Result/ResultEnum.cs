@@ -1,11 +1,12 @@
 ﻿namespace Safe_Qr_Backend.Result
 {
-    public enum RepoResultEnum
+    public enum ResultEnum
     {
         Successful,
         Failed,
         Duplicate,
-        DoesNotExist
-
+        DoesNotExist,
+        Conflict,
+        RoleDoesNotExist
     }
 }

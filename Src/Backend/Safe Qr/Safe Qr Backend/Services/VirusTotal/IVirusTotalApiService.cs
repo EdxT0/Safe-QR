@@ -5,6 +5,6 @@ namespace Safe_Qr_Backend.Services.VirusTotal
     public interface IVirusTotalApiService
     {
 
-        Task<AllServiceResult> EvaluateUrl(string url, CancellationToken ct);
+        Task<ServiceScanResult> EvaluateUrl(string url, CancellationToken ct);
     }
 }

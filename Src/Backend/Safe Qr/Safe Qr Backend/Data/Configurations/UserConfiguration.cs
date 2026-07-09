@@ -13,9 +13,13 @@ namespace Safe_Qr_Backend.Data.Configurations
             builder.ToTable("User");
 
             builder.HasKey(u => u.Id);
+
+            builder.HasIndex(u => u.Email).IsUnique();
         
             builder.Property( u => u.Enabled)
                 .HasDefaultValue(true);
+
+            builder.Property(u => u.Role).HasConversion<string>().IsRequired();
 
             builder.Property(u => u.RowVersion).IsRowVersion();
 

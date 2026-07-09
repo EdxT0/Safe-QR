@@ -14,7 +14,7 @@ namespace Safe_Qr_Backend.Services.VirusTotal
         private readonly Logger<VirusTotalApiService> _logger;
         private readonly string _apiKey;
         private readonly string baseUrl = "https://www.virustotal.com/api/v3/";
-        private readonly string vendor = "Virus Total";
+        private readonly VendorEnum vendor = VendorEnum.VirusTotal;
 
         public VirusTotalApiService(HttpClient httpClient, IConfiguration config, Logger<VirusTotalApiService> logger)
         {
@@ -26,7 +26,7 @@ namespace Safe_Qr_Backend.Services.VirusTotal
         }
 
 
-        public async Task<AllServiceResult> EvaluateUrl(string url, CancellationToken ct = default)
+        public async Task<ServiceScanResult> EvaluateUrl(string url, CancellationToken ct = default)
         {
             try
             {
@@ -58,36 +58,36 @@ namespace Safe_Qr_Backend.Services.VirusTotal
                 }
                 else
                 {
-                    return new AllServiceResult(vendor,ServiceResultEnum.suspicious, [$"Virus Total API didn't manage to get result"]);
+                    return new ServiceScanResult(vendor,ServiceResultEnum.suspicious, [$"Virus Total API didn't manage to get result"]);
                 }
 
             }
             catch (HttpRequestException ex)
             {
                 _logger.LogWarning(ex, "VirusTotal request failed for URL: {Url}", url);
-                return new AllServiceResult(vendor,ServiceResultEnum.highRisk, ["UNKNOWN"]);
+                return new ServiceScanResult(vendor,ServiceResultEnum.highRisk, ["UNKNOWN"]);
             }
             catch (JsonException ex)
             {
                 _logger.LogError(ex, "VirusTotal deserialization failed for URL: {Url}", url);
-                return new AllServiceResult(vendor,ServiceResultEnum.highRisk, ["UNKNOWN"]);
+                return new ServiceScanResult(vendor,ServiceResultEnum.highRisk, ["UNKNOWN"]);
             }
         }
-        private AllServiceResult BuildResult(int malicious, int suspicious, int harmless, int undetected, string vendor)
+        private ServiceScanResult BuildResult(int malicious, int suspicious, int harmless, int undetected, VendorEnum vendor)
         {
             if (malicious > 0)
-                return new AllServiceResult(vendor, ServiceResultEnum.malicious,
+                return new ServiceScanResult(vendor, ServiceResultEnum.malicious,
                     [$"VirusTotal: {malicious} engine(s) flagged as malicious"]);
 
             if (suspicious > 0)
-                return new AllServiceResult(vendor, ServiceResultEnum.suspicious,
+                return new ServiceScanResult(vendor, ServiceResultEnum.suspicious,
                     [$"VirusTotal: {suspicious} engine(s) flagged as suspicious"]);
 
             if (harmless > 0)
-                return new AllServiceResult(vendor,ServiceResultEnum.safe,
+                return new ServiceScanResult(vendor,ServiceResultEnum.safe,
                     [$"VirusTotal: {harmless} engine(s) confirmed safe"]);
 
-            return new AllServiceResult(vendor,ServiceResultEnum.suspicious,
+            return new ServiceScanResult(vendor,ServiceResultEnum.suspicious,
                 [$"VirusTotal: {undetected} engine(s) undetected — no verdict"]);
         }
 
