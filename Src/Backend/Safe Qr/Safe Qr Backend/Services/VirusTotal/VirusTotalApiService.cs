@@ -11,22 +11,22 @@ namespace Safe_Qr_Backend.Services.VirusTotal
     {
 
         private readonly HttpClient _httpClient;
-        private readonly Logger<VirusTotalApiService> _logger;
+        private readonly ILogger<VirusTotalApiService> _logger;
         private readonly string _apiKey;
         private readonly string baseUrl = "https://www.virustotal.com/api/v3/";
         private readonly VendorEnum vendor = VendorEnum.VirusTotal;
 
-        public VirusTotalApiService(HttpClient httpClient, IConfiguration config, Logger<VirusTotalApiService> logger)
+        public VirusTotalApiService(HttpClient httpClient, IConfiguration config, ILogger<VirusTotalApiService> logger)
         {
             _httpClient = httpClient;
             _logger = logger;
-            _apiKey = config["ApiKeys:VirusTotal"] ?? throw new InvalidOperationException("VirusTotal api key not set up");
+            _apiKey = config["VirusTotal:ApiKey"] ?? throw new InvalidOperationException("VirusTotal api key not set up");
 
             _httpClient.DefaultRequestHeaders.Add("x-apikey", _apiKey);
         }
 
 
-        public async Task<ServiceScanResult> EvaluateUrl(string url, CancellationToken ct = default)
+        public async Task<ServiceScanResult> EvaluateUrlAsync(string url, CancellationToken ct = default)
         {
             try
             {

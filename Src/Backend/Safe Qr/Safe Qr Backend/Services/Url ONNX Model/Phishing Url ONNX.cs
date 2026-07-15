@@ -44,21 +44,21 @@ namespace Safe_Qr_Backend.Services
         {
 
 
-            if (phishingProb <= 40)
+            if (phishingProb <= 0.40)
             {
-                return new ServiceScanResult(vendor, ServiceResultEnum.safe, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
+                return new ServiceScanResult(vendor, ServiceResultEnum.safe, [$"ONNX Model Phishing probability is around {phishingProb * 100}%"]);
             }
-            else if (phishingProb > 40 && phishingProb <= 60)
+            else if (phishingProb > 0.40 && phishingProb <= 0.60)
             {
-                return new ServiceScanResult(vendor, ServiceResultEnum.suspicious, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
+                return new ServiceScanResult(vendor, ServiceResultEnum.suspicious, [$"ONNX Model Phishing probability is around {phishingProb * 100}%"]);
             }
-            else if (phishingProb > 60 && phishingProb < 80)
+            else if (phishingProb > 0.60 && phishingProb < 0.80)
             {
-                return new ServiceScanResult(vendor, ServiceResultEnum.highRisk, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
+                return new ServiceScanResult(vendor, ServiceResultEnum.highRisk, [$"ONNX Model Phishing probability is around {phishingProb*100}%"]);
             }
             else
             {
-                return new ServiceScanResult(vendor, ServiceResultEnum.malicious, [$"ONNX Model Phishing probability is around {phishingProb}%"]);
+                return new ServiceScanResult(vendor, ServiceResultEnum.malicious, [$"ONNX Model Phishing probability is around {phishingProb * 100}%"]);
             }
         }
     }

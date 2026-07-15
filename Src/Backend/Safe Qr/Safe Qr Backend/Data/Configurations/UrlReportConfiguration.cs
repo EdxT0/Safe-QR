@@ -17,22 +17,27 @@ namespace Safe_Qr_Backend.Data.Configurations
             builder.HasIndex(u => u.Url).IsUnique();
 
 
-            builder.ComplexCollection(u => u.Results, b =>
+            builder.ComplexProperty(u => u.Results, aggr =>
             {
-                b.ToJson();
+                aggr.ToJson();
 
-                b.Property(r => r.vendor).HasConversion<string>().IsRequired();
-                b.Property(r => r.serviceResultVerdict).HasConversion<string>().IsRequired();
-                b.Property(r => r.reasons).IsRequired();
+                aggr.Property(r => r.ServiceResultEnum).HasConversion<string>().IsRequired();
+                aggr.ComplexCollection(r => r.ServiceScanResult, serviceScanResultList =>
+                {
+                    serviceScanResultList.Property(serviceScanResult => serviceScanResult.Vendor).HasConversion<string>().IsRequired();
+                    serviceScanResultList.Property(serviceScanResult => serviceScanResult.ServiceResult).HasConversion<string>().IsRequired();
+                    serviceScanResultList.Property(serviceScanResult => serviceScanResult.Reasons).IsRequired();
+
+                });
+
             });
-
-
-
             builder.Property(u => u.FlaggedForWrong)
                 .IsRequired()
                 .HasDefaultValue(false);
 
             builder.Property(u => u.RowVersion).IsRowVersion();
+
+
         }
     }
 }

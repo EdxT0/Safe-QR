@@ -7,7 +7,7 @@ namespace Safe_Qr_Backend.Entities
 
         public int Id { get; set; }
         public required string Url { get; set; }
-        public required List<ServiceResult> Results { get; set; } = new List<ServiceResult>();
+        public required AggregatedFinalResult Results { get; set; } 
 
         public bool FlaggedForWrong { get; set; } = false;
 

@@ -4,9 +4,9 @@ using Safe_Qr_Backend.Data;
 using Safe_Qr_Backend.Entities;
 using Safe_Qr_Backend.Result;
 
-namespace Safe_Qr_Backend.Repository.Repository.UserRepo
+namespace Safe_Qr_Backend.Repository.Repository.Users
 {
-    public class UserRepository
+    public class UserRepository : IUserRepository
     {
 
         private readonly AppDbContext _appDbContext;

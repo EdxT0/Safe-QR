@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Safe_Qr_Backend.DTO.UserController;
 using Safe_Qr_Backend.Entities;
-using Safe_Qr_Backend.Repository.Repository.UserRepo;
+using Safe_Qr_Backend.Repository.Repository.Users;
 using Safe_Qr_Backend.Result;
 
 namespace Safe_Qr_Backend.Services.Users
