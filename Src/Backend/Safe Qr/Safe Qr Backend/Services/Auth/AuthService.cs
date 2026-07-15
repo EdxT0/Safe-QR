@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Safe_Qr_Backend.Entities;
-using Safe_Qr_Backend.Repository.Repository.UserRepo;
+using Safe_Qr_Backend.Repository.Repository.Users;
 using System.Security.Claims;
 
 namespace Safe_Qr_Backend.Services.Auth

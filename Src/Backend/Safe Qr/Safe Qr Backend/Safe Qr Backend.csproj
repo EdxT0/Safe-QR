@@ -1,30 +1,35 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>Safe_Qr_Backend</RootNamespace>
-    <UserSecretsId>c73582b4-e068-41b3-9713-23ec3647660b</UserSecretsId>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<RootNamespace>Safe_Qr_Backend</RootNamespace>
+		<UserSecretsId>c73582b4-e068-41b3-9713-23ec3647660b</UserSecretsId>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.7" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.26.0" />
-    <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
+	<ItemGroup>
+		<PackageReference Include="Google.Protobuf" Version="3.35.1" />
+		<PackageReference Include="Grpc.Tools" Version="*" />
+		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.7" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.26.0" />
+		<PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
 
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
-  </ItemGroup>
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
+	</ItemGroup>
 
-<ItemGroup>
-  <None Update="Models\model.onnx">
-    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-  </None>
-</ItemGroup>	
-	
+	<ItemGroup>
+		<None Update="Models\model.onnx">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+	<ItemGroup>
+		<Protobuf Include="Protos\safebrowsing.proto" GrpcServices="None" />
+	</ItemGroup>
 
 </Project>

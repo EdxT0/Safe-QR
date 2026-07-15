@@ -1,0 +1,25 @@
+﻿syntax = "proto3";
+
+package safebrowsing.v5;
+
+import "google/protobuf/duration.proto";
+
+option csharp_namespace = "Safe_Qr_Backend.Protos.SafeBrowsing";
+
+message SearchUrlsResponse {
+  repeated ThreatUrl threats = 1;
+  google.protobuf.Duration cache_duration = 2;
+}
+
+message ThreatUrl {
+  string url = 1;
+  repeated ThreatType threat_types = 2;
+}
+
+enum ThreatType {
+  THREAT_TYPE_UNSPECIFIED = 0;
+  MALWARE = 1;
+  SOCIAL_ENGINEERING = 2;
+  UNWANTED_SOFTWARE = 3;
+  POTENTIALLY_HARMFUL_APPLICATION = 4;
+}

@@ -4,7 +4,7 @@ using Safe_Qr_Backend.Data;
 using Safe_Qr_Backend.Entities;
 using Safe_Qr_Backend.Result;
 
-namespace Safe_Qr_Backend.Repository.UrlReportRepo
+namespace Safe_Qr_Backend.Repository.UrlReports
 {
     public class UrlReportRepository : IUrlReportRepository
     {
@@ -17,7 +17,7 @@ namespace Safe_Qr_Backend.Repository.UrlReportRepo
         }
 
 
-        public async Task<Result<UrlReport>> AddUrlAsync(string url, List<ServiceResult> serviceResults, CancellationToken ct)
+        public async Task<Result<UrlReport>> AddUrlAsync(string url, AggregatedFinalResult aggregatedFinalResult, CancellationToken ct)
         {
             bool IsUniqueConstraintViolation(DbUpdateException ex)
             {
@@ -33,9 +33,9 @@ namespace Safe_Qr_Backend.Repository.UrlReportRepo
             var urlReport = new UrlReport
             {
                 Url = url,
-                Results = serviceResults,
+                Results = aggregatedFinalResult,
                 FlaggedForWrong = false
-            };
+            }; 
             _appDbContext.UrlReport.Add(urlReport);
 
             try
@@ -43,18 +43,19 @@ namespace Safe_Qr_Backend.Repository.UrlReportRepo
                 await _appDbContext.SaveChangesAsync(ct);
             }catch(DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
             {
+                _appDbContext.Entry(urlReport).State = EntityState.Detached;
                 return Result<UrlReport>.Failure(ResultEnum.Duplicate);
             }
 
             return Result<UrlReport>.Succeeded(urlReport, ResultEnum.Successful);
         }
 
-        public async Task<Result<UrlReport>> UpdateUrlAsync(string url, List<ServiceResult> serviceResults, CancellationToken ct)
+        public async Task<Result<UrlReport>> UpdateUrlAsync(string url, AggregatedFinalResult aggregatedFinalResult, CancellationToken ct)
         {
             var existing = await _appDbContext.UrlReport.FirstOrDefaultAsync(u => u.Url == url, ct);
             if (existing != null)
             {
-                existing.Results = serviceResults;
+                existing.Results = aggregatedFinalResult;
 
                 try
                 {
@@ -63,7 +64,7 @@ namespace Safe_Qr_Backend.Repository.UrlReportRepo
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    return Result<UrlReport>.Failure(ResultEnum.Conflict);
+                    return Result<UrlReport>.Failure(ResultEnum.Failed);
                 }
             }
             return Result<UrlReport>.Failure(ResultEnum.DoesNotExist); 
@@ -109,20 +110,34 @@ namespace Safe_Qr_Backend.Repository.UrlReportRepo
             return Result<UrlReport>.Failure(ResultEnum.DoesNotExist); 
         }
 
-        public async Task<Result<List<ServiceResult>>> GetAllServiceResultByUrlAsync(string url, CancellationToken ct)
+        public async Task<Result<List<ServiceScanResult>>> GetAllServiceResultByUrlAsync(string url, CancellationToken ct)
         {
             var existing = await _appDbContext.UrlReport.FirstOrDefaultAsync(u => u.Url == url, ct);
             if (existing != null)
             {
-                return Result<List<ServiceResult>>.Succeeded( existing.Results, ResultEnum.Successful);
+                return Result<List<ServiceScanResult>>.Succeeded( existing.Results.ServiceScanResult , ResultEnum.Successful);
             }
-            return Result<List<ServiceResult>>.Failure(ResultEnum.DoesNotExist) ;
+            return Result<List<ServiceScanResult>>.Failure(ResultEnum.DoesNotExist) ;
         }
 
         public async Task<Result<List<UrlReport>>> GetAllUrlReportAsync(CancellationToken ct)
         {
             var urlReportList = await _appDbContext.UrlReport.AsNoTracking().ToListAsync(ct);
             return Result<List<UrlReport>>.Succeeded(urlReportList, ResultEnum.Successful);
+        }
+
+        public async Task<Result<UrlReport>> GetUrlReportByIdAsync(int id, CancellationToken ct)
+        {
+            var urlReportList = await _appDbContext.UrlReport.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id, ct);
+            if(urlReportList != null)
+            {
+                return Result<UrlReport>.Succeeded(urlReportList, ResultEnum.Successful);
+
+            }
+            else
+            {
+                return Result<UrlReport>.Failure(ResultEnum.DoesNotExist);
+            }
         }
 
 
