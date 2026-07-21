@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Safe_Qr_Backend.Data;
+using Safe_Qr_Backend.DTO.UrlDTO;
 using Safe_Qr_Backend.Entities;
 using Safe_Qr_Backend.Result;
 
@@ -108,6 +109,26 @@ namespace Safe_Qr_Backend.Repository.UrlReports
 
             }
             return Result<UrlReport>.Failure(ResultEnum.DoesNotExist); 
+        }
+
+        public async Task<Result<UrlThreatsAnalyticsDTO>> GetThreatsAnalyticsAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken ct)
+        {
+            var result = await _appDbContext.UrlReport.Where(u => u.CreatedAt > from && u.CreatedAt < to)
+                                                    .GroupBy(u => new { Date = u.CreatedAt.Date, u.Results.ServiceResultEnum })
+                                                    .Select(g => new UrlThreatBucketDTO
+                                                    {
+                                                        Date = g.Key.Date,
+                                                        Result = g.Key.ServiceResultEnum,
+                                                        Count = g.Count()
+                                                    }).ToListAsync(ct);
+             var urlThreatsAnalytics = new UrlThreatsAnalyticsDTO
+            {
+                DailyBreakdowns = result,
+                MaliciousCount = result.Count(r => r.Result == ServiceResultEnum.malicious),
+                TotalScanned = result.Sum(r => r.Count)
+            };
+
+            return Result<UrlThreatsAnalyticsDTO>.Succeeded(urlThreatsAnalytics, ResultEnum.Successful);
         }
 
         public async Task<Result<List<ServiceScanResult>>> GetAllServiceResultByUrlAsync(string url, CancellationToken ct)

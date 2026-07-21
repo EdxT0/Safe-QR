@@ -5,7 +5,7 @@ Accept: application/json
 content-type:application/json
 
 {
-  "url": "https://www.test1.com"
+  "url": "https://www.paypal.com@evil.com"
 }
 ###
 Get {{Safe_Qr_Backend_HostAddress}}/api/UrlReport/All
@@ -23,3 +23,7 @@ content-type:application/json
 {
   "url": "http:// t-info.mail.adobe.com/r/?id=hc43f43t4a,afd67070,affc7349&p1=t.mid.accor-mail.com/r/?id=159593f159593159593,hde43e13b13,ecdfafef,ee5cfa06&p1=filepmgklf.com/victimemail"
 }
+
+###
+GET {{Safe_Qr_Backend_HostAddress}}/api/UrlReport/analytics/threats
+Accept: application/json
