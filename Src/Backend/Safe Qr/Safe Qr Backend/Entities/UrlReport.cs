@@ -10,8 +10,8 @@ namespace Safe_Qr_Backend.Entities
         public required AggregatedFinalResult Results { get; set; } 
 
         public bool FlaggedForWrong { get; set; } = false;
+        public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
         public uint RowVersion { get; set; }
-
     }
 }

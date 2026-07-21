@@ -10,12 +10,13 @@ using Safe_Qr_Backend.Repository.Repository.Users;
 using Safe_Qr_Backend.Repository.UrlReports;
 using Safe_Qr_Backend.Services;
 using Safe_Qr_Backend.Services.Google_Safe_Browsing;
-using Safe_Qr_Backend.Services.Url;
+using Safe_Qr_Backend.Services.UrlScans;
 using Safe_Qr_Backend.Services.Users;
 using Safe_Qr_Backend.Services.VirusTotal;
 using System.Text.Json.Serialization;
-using Microsoft.Extensions.Http.Resilience;
 using Polly;
+using Safe_Qr_Backend.Services.UrlThreatEngine;
+using Safe_Qr_Backend.Services.UrlReports;
 
 namespace Safe_Qr_Backend
 {
@@ -72,6 +73,7 @@ namespace Safe_Qr_Backend
             builder.Services.AddScoped<IPasswordHasher<UserCreateDTO>, PasswordHasher<UserCreateDTO>>();
 
             builder.Services.AddScoped<Phishing_Url_ONNX>();
+            builder.Services.AddScoped<IUrlThreatEngineService, UrlThreatEngineService>();
             builder.Services.AddHttpClient<IGoogleSafeApiService, GoogleSafeApiService>((sp, client) =>
             {
                 var options = sp.GetRequiredService<IOptions<SafeBrowsingOptions>>().Value;
@@ -79,19 +81,13 @@ namespace Safe_Qr_Backend
                 client.Timeout = TimeSpan.FromSeconds(5);
             }).AddResilienceHandler("safe-browsing-retry", builder =>
                 {
-                    builder.AddRetry(new HttpRetryStrategyOptions
-                    {
-                        MaxRetryAttempts = 2,
-                        BackoffType = DelayBackoffType.Exponential,
-                        Delay = TimeSpan.FromMilliseconds(200)
-                    });
                     builder.AddTimeout(TimeSpan.FromSeconds(5));
                 });
 
 
             builder.Services.AddHttpClient<IVirusTotalApiService, VirusTotalApiService>();
-
-            builder.Services.AddScoped<IUrlService, UrlService>();
+            builder.Services.AddScoped<IUrlReportService, UrlReportService>();
+            builder.Services.AddScoped<IUrlScanService, UrlScanService>();
             builder.Services.AddScoped<IUserService, UserService>();
 
 

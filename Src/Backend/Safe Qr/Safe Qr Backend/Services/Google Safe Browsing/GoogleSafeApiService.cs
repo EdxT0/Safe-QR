@@ -11,7 +11,6 @@ namespace Safe_Qr_Backend.Services.Google_Safe_Browsing
     public class GoogleSafeApiService: IGoogleSafeApiService
     {
         private readonly HttpClient _httpClient;
-        private readonly string _apiKey;
         private readonly ILogger<GoogleSafeApiService> _logger;
         private readonly VendorEnum vendor = VendorEnum.Google;
         private readonly IOptions<SafeBrowsingOptions> _options;
@@ -19,7 +18,6 @@ namespace Safe_Qr_Backend.Services.Google_Safe_Browsing
         public GoogleSafeApiService(HttpClient httpClient, IConfiguration config, ILogger<GoogleSafeApiService> logger, IOptions<SafeBrowsingOptions> options)
         {
             _httpClient = httpClient;
-            _apiKey = config["ApiKeys:SafeBrowsing"] ?? throw new InvalidOperationException("Safe Browsing API key is not configured.");
             _logger = logger;
             _options = options;
         }
@@ -39,7 +37,8 @@ namespace Safe_Qr_Backend.Services.Google_Safe_Browsing
             catch (HttpRequestException ex)
             {
                 _logger.LogError(ex, "Safe Browsing urls:search request failed.");
-                return new ServiceScanResult(vendor, ServiceResultEnum.highRisk, ["Safe Browsing request failed."]);
+                throw;
+                //return new ServiceScanResult(vendor, ServiceResultEnum.highRisk, ["Safe Browsing request failed."]);
             }
 
             if (!httpResponse.IsSuccessStatusCode)

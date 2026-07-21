@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Safe_Qr_Backend.DTO.UrlDTO;
-using Safe_Qr_Backend.Services.Url;
+using Safe_Qr_Backend.Services.UrlScans;
+using Safe_Qr_Backend.Services.UrlReports;
+
 
 namespace Safe_Qr_Backend.Controllers
 {
@@ -9,17 +11,20 @@ namespace Safe_Qr_Backend.Controllers
     [ApiController]
     public class ScanController : ControllerBase
     {
-        private readonly IUrlService _urlService;
+        private readonly IUrlScanService _urlScanService;
+        private readonly IUrlReportService _urlReportService;
 
-        public ScanController(IUrlService urlService)
+
+        public ScanController(IUrlScanService urlScanService, IUrlReportService urlReportService)
         {
-            _urlService = urlService;
+            _urlScanService = urlScanService;
+            _urlReportService = urlReportService;
         }
 
         [HttpPost]
         public async Task<IActionResult> ScanUrlAsync([FromBody] ScanUrlDTO scanUrlDTO, CancellationToken ct)
         {
-            var scanResult=  await _urlService.EvaluateUrlAsync(scanUrlDTO.Url, ct);
+            var scanResult=  await _urlScanService.PipelineEvaluate(scanUrlDTO.Url, ct);
 
             return Ok(scanResult);
         }
@@ -27,7 +32,7 @@ namespace Safe_Qr_Backend.Controllers
         [HttpPatch("{id:int}/flag")]
         public async Task<IActionResult> SetUrlFlagAsync([FromQuery] int id, CancellationToken ct)
         {
-            var result = await _urlService.FlagUrlAsync(id, ct);
+            var result = await _urlReportService.FlagUrlAsync(id, ct);
             
                
             if(result.IsSucceeded == true)

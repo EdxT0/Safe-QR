@@ -65,7 +65,8 @@ namespace Safe_Qr_Backend.Services.VirusTotal
             catch (HttpRequestException ex)
             {
                 _logger.LogWarning(ex, "VirusTotal request failed for URL: {Url}", url);
-                return new ServiceScanResult(vendor,ServiceResultEnum.highRisk, ["UNKNOWN"]);
+                //return new ServiceScanResult(vendor,ServiceResultEnum.highRisk, ["UNKNOWN"]);
+                throw;
             }
             catch (JsonException ex)
             {

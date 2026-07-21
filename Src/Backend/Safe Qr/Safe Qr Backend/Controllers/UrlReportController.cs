@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Safe_Qr_Backend.Services.Url;
+using Safe_Qr_Backend.Services.UrlReports;
+using Safe_Qr_Backend.Services.UrlScans;
 
 namespace Safe_Qr_Backend.Controllers
 {
@@ -9,29 +10,40 @@ namespace Safe_Qr_Backend.Controllers
     public class UrlReportController : ControllerBase
     {
 
-        private readonly IUrlService _urlService;
+        private readonly IUrlReportService _urlReportService;
 
-        public UrlReportController(IUrlService urlService)
+
+        public UrlReportController(IUrlReportService urlReportService)
         {
-            _urlService = urlService;
+            _urlReportService = urlReportService;
         }
 
         [HttpGet("All")]
         public async Task<IActionResult> GetAllUrlReport(CancellationToken ct)
         {
-            var result = await _urlService.GetAllUrlReportAsync(ct);
+            var result = await _urlReportService.GetAllUrlReportAsync(ct);
             return Ok(result.Value);
         }
 
         [HttpGet("{Id:int}")]
         public async Task<IActionResult> GetUrlReportById(int Id, CancellationToken ct)
         {
-            var result = await _urlService.GetUrlReportByIdAsync(Id, ct);
+            var result = await _urlReportService.GetUrlReportByIdAsync(Id, ct);
             if(result.Reasons == Result.ResultEnum.DoesNotExist)
             {
                 return NotFound(Id);
             }
             return Ok(result.Value);
+        }
+
+        [HttpGet("analytics/threats")]
+        public async Task<IActionResult> GetThreatsAnalytics([FromQuery]DateOnly? from, [FromQuery] DateOnly? to, CancellationToken ct)
+        {
+            var effectiveFrom = from ?? DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-30));
+            var effectiveTo = to ?? DateOnly.FromDateTime(DateTime.UtcNow);
+
+            var result = await _urlReportService.GetThreatsAnalyticsAsync(effectiveFrom, effectiveTo, ct);
+            return Ok(result);
         }
     }
 }
