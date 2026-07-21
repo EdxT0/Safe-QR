@@ -13,12 +13,12 @@ namespace Safe_Qr_Backend.Services.UrlReports
             _urlReportRepository = urlReportRepository;
         }
 
-        public async Task<UrlThreatsAnalyticsDTO?> GetThreatsAnalyticsAsync(DateOnly from, DateOnly to, CancellationToken ct)
+        public async Task<UrlThreatsAnalyticsDTO> GetThreatsAnalyticsAsync(DateOnly from, DateOnly to, CancellationToken ct)
         {
             var fromUtc = new DateTimeOffset(from.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
             var toUtc = new DateTimeOffset(to.ToDateTime(TimeOnly.MaxValue), TimeSpan.Zero);
             var result =  await _urlReportRepository.GetThreatsAnalyticsAsync(fromUtc, toUtc, ct);
-            return result.Value;
+            return result.Value!;
         }
 
         public async Task<Result<UrlReport>> FlagUrlAsync(int id, CancellationToken ct)
