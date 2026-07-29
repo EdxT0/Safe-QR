@@ -35,16 +35,36 @@ namespace Safe_Qr_Backend
             });
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
-            builder.Services.AddAuthentication()
+            builder.Services.AddAuthentication("LoginCookie")
                 .AddCookie("LoginCookie", options =>
                 {
                     options.Cookie.Name = "sessionId";
                     options.Cookie.HttpOnly = true;
-                    options.Cookie.SameSite = SameSiteMode.Lax;
+                    // The frontend (http://localhost:3000) and API (https://localhost:56166) differ
+                    // in scheme, which Chromium's schemeful-same-site treats as cross-site — Lax
+                    // would silently drop the cookie on cross-origin fetches. None+Secure is the
+                    // standard pairing for a separately-hosted SPA talking to a cookie-auth API.
+                    options.Cookie.SameSite = SameSiteMode.None;
                     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                     options.ExpireTimeSpan = TimeSpan.FromHours(1);
+                    options.Events.OnRedirectToLogin = context =>
+                    {
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        return Task.CompletedTask;
+                    };
                 });
             builder.Services.AddAuthorization();
+
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("Frontend", policy => policy
+                    .WithOrigins(
+                        builder.Configuration.GetSection("FrontendOrigins").Get<string[]>()
+                        ?? new[] { "http://localhost:3000" })
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials());
+            });
 
 
             //Dependancy Injection
@@ -69,8 +89,12 @@ namespace Safe_Qr_Backend
 
             builder.Services.AddScoped<IUrlReportRepository, UrlReportRepository>();
             builder.Services.AddScoped<IUserRepository, UserRepository>();
+            builder.Services.AddScoped<Safe_Qr_Backend.Repository.ScanHistories.IScanHistoryRepository, Safe_Qr_Backend.Repository.ScanHistories.ScanHistoryRepository>();
+            builder.Services.AddScoped<Safe_Qr_Backend.Services.ScanHistories.IScanHistoryService, Safe_Qr_Backend.Services.ScanHistories.ScanHistoryService>();
 
             builder.Services.AddScoped<IPasswordHasher<UserCreateDTO>, PasswordHasher<UserCreateDTO>>();
+            builder.Services.AddScoped<PasswordHasher<Safe_Qr_Backend.Entities.User>>();
+            builder.Services.AddScoped<Safe_Qr_Backend.Services.Auth.IAuthService, Safe_Qr_Backend.Services.Auth.AuthService>();
 
             builder.Services.AddScoped<Phishing_Url_ONNX>();
             builder.Services.AddScoped<IUrlThreatEngineService, UrlThreatEngineService>();
@@ -90,6 +114,8 @@ namespace Safe_Qr_Backend
             builder.Services.AddScoped<IUrlScanService, UrlScanService>();
             builder.Services.AddScoped<IUserService, UserService>();
 
+            builder.Services.AddSingleton<Safe_Qr_Backend.Services.Sandbox.ISandboxScreenshotService, Safe_Qr_Backend.Services.Sandbox.SandboxScreenshotService>();
+
 
 
 
@@ -106,6 +132,8 @@ namespace Safe_Qr_Backend
             }
 
             app.UseHttpsRedirection();
+
+            app.UseCors("Frontend");
 
             app.UseAuthentication();
             app.UseAuthorization();

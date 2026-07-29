@@ -1,13 +1,27 @@
 /**
  * ThreatAnalysisService — Singleton
- * Orchestrates URL safety analysis by combining:
- *   1. Rule-based heuristic checks
- *   2. ML model classification (Python Flask microservice)
- *   3. External threat intelligence APIs (VirusTotal, PhishTank, Google Safe Browsing)
- *
+ * For URL payloads, calls the ASP.NET Core /api/Scan pipeline, which
+ * aggregates Google Safe Browsing, VirusTotal, an ONNX phishing model,
+ * and an in-house rule engine into one verdict.
+ * Non-URL payloads (wifi/sms/email/tel/contact/text) have no backend
+ * evaluator, so they fall back to a local heuristic.
  * Results are cached in-memory to avoid redundant API calls.
  */
 import { ThreatResult } from '../models/ThreatResult';
+import { apiFetch } from '../api';
+
+const RISK_LEVEL_BY_SERVICE_RESULT = {
+  safe:       ThreatResult.LEVELS.SAFE,
+  suspicious: ThreatResult.LEVELS.SUSPICIOUS,
+  highRisk:   ThreatResult.LEVELS.SUSPICIOUS,
+  malicious:  ThreatResult.LEVELS.MALICIOUS,
+};
+
+const RECOMMENDATION_BY_RISK_LEVEL = {
+  [ThreatResult.LEVELS.SAFE]:       'This QR code appears safe to open.',
+  [ThreatResult.LEVELS.SUSPICIOUS]: 'Exercise caution. Use the sandbox preview to inspect the destination before proceeding.',
+  [ThreatResult.LEVELS.MALICIOUS]:  'Do not open this link. This QR code is dangerous.',
+};
 
 export class ThreatAnalysisService {
   static #instance = null;
@@ -30,9 +44,12 @@ export class ThreatAnalysisService {
     if (this.#cache.has(payload)) {
       return this.#cache.get(payload);
     }
-    // TODO: replace simulated delay with POST /api/scan/analyze
-    await new Promise(r => setTimeout(r, 1400));
-    const result = this.#classifyPayload(payload);
+
+    const type = this.detectPayloadType(payload);
+    const result = type === 'url'
+      ? await this.#analyseUrl(payload)
+      : this.#classifyNonUrlPayload(payload, type);
+
     this.#cache.set(payload, result);
     return result;
   }
@@ -53,72 +70,82 @@ export class ThreatAnalysisService {
   }
 
   /**
-   * Internal rule-based + simulated ML classification.
-   * TODO: replace with real API call to Python Flask ML microservice.
-   * @param {string} payload
+   * Sends a URL payload through the backend scan pipeline and maps
+   * the AggregatedFinalResult into a display-friendly ThreatResult.
+   * @param {string} url
+   * @returns {Promise<ThreatResult>}
+   */
+  async #analyseUrl(url) {
+    const raw = await apiFetch('/api/Scan', { method: 'POST', body: { Url: url } });
+    return this.#mapAggregatedResult(raw);
+  }
+
+  /**
+   * Maps a backend AggregatedFinalResult (serviceResultEnum + per-vendor
+   * serviceScanResult list) into a ThreatResult for display, keeping the
+   * raw shape attached so it can be re-sent when saving to history.
+   * @param {object} raw
    * @returns {ThreatResult}
    */
-  #classifyPayload(payload) {
-    const url = payload.toLowerCase();
+  #mapAggregatedResult(raw) {
+    const riskLevel = RISK_LEVEL_BY_SERVICE_RESULT[raw.serviceResultEnum] || ThreatResult.LEVELS.SAFE;
+    const votes = raw.serviceScanResult || [];
 
-    const maliciousKeywords = [
-      'phishing', 'malware', 'steal', 'hack',
-      'free-prize', 'win?ref', '.tk', 'exploit',
-    ];
-    const suspiciousKeywords = [
-      'bit.ly', 'tinyurl', 't.co', 'goo.gl',
-      'login-verify', 'free-', 'click-here',
-    ];
+    const agreeing = votes.filter(v => v.serviceResult === raw.serviceResultEnum);
+    const confidenceScore = votes.length
+      ? Math.round((agreeing.length / votes.length) * 100)
+      : 0;
 
-    if (maliciousKeywords.some(k => url.includes(k))) {
-      return new ThreatResult({
-        riskLevel:       ThreatResult.LEVELS.MALICIOUS,
-        confidenceScore: 97,
-        explanation:
-          'This URL contains patterns associated with phishing or malware distribution. ' +
-          'The domain has been flagged by VirusTotal and PhishTank.',
-        recommendation: 'Do not open this link. This QR code is dangerous.',
-        sources:         ['VirusTotal', 'PhishTank', 'ML Engine'],
-        mlPrediction:    'malicious',
-      });
-    }
+    const explanation = (agreeing.length ? agreeing : votes)
+      .map(v => `${v.vendor}: ${v.reasons.join(', ')}`)
+      .join(' ');
 
-    if (suspiciousKeywords.some(k => url.includes(k)) || url.startsWith('http://')) {
-      return new ThreatResult({
-        riskLevel:       ThreatResult.LEVELS.SUSPICIOUS,
-        confidenceScore: 71,
-        explanation:
-          'This URL uses a URL shortener or an unencrypted HTTP connection. ' +
-          'The true destination cannot be fully verified.',
-        recommendation:
-          'Exercise caution. Use the sandbox preview to inspect the destination before proceeding.',
-        sources:      ['Rule-Based Engine', 'ML Engine'],
-        mlPrediction: 'suspicious',
-      });
-    }
+    const onnxVote = votes.find(v => v.vendor === 'ONNX');
 
-    if (payload.startsWith('WIFI:')) {
-      return new ThreatResult({
-        riskLevel:       ThreatResult.LEVELS.SAFE,
-        confidenceScore: 88,
-        explanation:
-          'This QR code contains a Wi-Fi configuration payload. No malicious indicators detected.',
-        recommendation:
-          'Verify the network name matches a trusted location before connecting.',
-        sources:      ['Payload Inspector'],
-        mlPrediction: 'safe',
-      });
-    }
+    return new ThreatResult({
+      riskLevel,
+      confidenceScore,
+      explanation: explanation || 'No further details were returned by the scan pipeline.',
+      recommendation: RECOMMENDATION_BY_RISK_LEVEL[riskLevel],
+      sources: votes.map(v => v.vendor),
+      mlPrediction: onnxVote?.serviceResult ?? null,
+      raw,
+    });
+  }
+
+  /**
+   * Local rule-based classification for payload types the backend
+   * scan pipeline does not evaluate (it only understands URLs).
+   * @param {string} payload
+   * @param {string} type
+   * @returns {ThreatResult}
+   */
+  #classifyNonUrlPayload(payload, type) {
+    const explanation = type === 'wifi'
+      ? 'This QR code contains a Wi-Fi configuration payload. No malicious indicators detected.'
+      : `This QR code contains a ${type} payload, which is not run through the URL threat pipeline.`;
+
+    // Backend's scan pipeline only evaluates URLs, so build an
+    // AggregatedFinalResult-shaped placeholder locally — this keeps the
+    // "raw" field populated for any type, which ScanHistoryService needs
+    // to persist a record regardless of payload type. "InHouse" is reused
+    // as the vendor since it's the only backend vendor enum value that
+    // fits a local, non-external-API check.
+    const raw = {
+      serviceResultEnum: 'safe',
+      serviceScanResult: [{ vendor: 'InHouse', serviceResult: 'safe', reasons: [explanation] }],
+    };
 
     return new ThreatResult({
       riskLevel:       ThreatResult.LEVELS.SAFE,
-      confidenceScore: 94,
-      explanation:
-        'This URL was checked against threat intelligence sources and machine learning models. ' +
-        'No threats were detected.',
-      recommendation: 'This QR code appears safe to open.',
-      sources:        ['VirusTotal', 'Google Safe Browsing', 'ML Engine'],
-      mlPrediction:   'safe',
+      confidenceScore: type === 'wifi' ? 88 : 70,
+      explanation,
+      recommendation: type === 'wifi'
+        ? 'Verify the network name matches a trusted location before connecting.'
+        : 'Review the content before acting on it.',
+      sources: ['Payload Inspector'],
+      mlPrediction: 'safe',
+      raw,
     });
   }
 }

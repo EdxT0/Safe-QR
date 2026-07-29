@@ -17,6 +17,7 @@ export class ThreatResult {
     recommendation  = '',
     sources         = [],
     mlPrediction    = null,
+    raw             = null,
   } = {}) {
     this.riskLevel       = riskLevel;
     this.confidenceScore = confidenceScore;
@@ -24,6 +25,9 @@ export class ThreatResult {
     this.recommendation  = recommendation;
     this.sources         = sources;
     this.mlPrediction    = mlPrediction;
+    // Raw AggregatedFinalResult from POST /api/Scan, kept so ScanHistoryService
+    // can persist the original backend shape when saving this record.
+    this.raw              = raw;
   }
 
   isSafe()       { return this.riskLevel === ThreatResult.LEVELS.SAFE; }

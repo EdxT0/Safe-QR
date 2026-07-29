@@ -115,8 +115,8 @@ export function Navbar({ activePath }) {
   const router = useRouter();
   const { user, setUser } = useUser();
 
-  const handleLogout = () => {
-    AuthService.getInstance().logout();
+  const handleLogout = async () => {
+    await AuthService.getInstance().logout();
     setUser(null);
     router.push('/scanner');
   };

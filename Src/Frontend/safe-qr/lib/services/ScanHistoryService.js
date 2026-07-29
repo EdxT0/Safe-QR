@@ -1,15 +1,56 @@
 /**
  * ScanHistoryService — Singleton
- * Manages CRUD operations for a user's scan history.
- * In production, all methods call the ASP.NET Core /api/history endpoints
- * which read/write from the MySQL database.
+ * CRUD for the logged-in user's scan history, backed by the
+ * ASP.NET Core /api/ScanHistory endpoints (requires an authenticated
+ * session — the backend scopes records to the current user).
  */
 import { ScanRecord }   from '../models/ScanRecord';
 import { ThreatResult } from '../models/ThreatResult';
+import { apiFetch }     from '../api';
+
+const RISK_LEVEL_BY_SERVICE_RESULT = {
+  safe:       ThreatResult.LEVELS.SAFE,
+  suspicious: ThreatResult.LEVELS.SUSPICIOUS,
+  highRisk:   ThreatResult.LEVELS.SUSPICIOUS,
+  malicious:  ThreatResult.LEVELS.MALICIOUS,
+};
+
+const RECOMMENDATION_BY_RISK_LEVEL = {
+  [ThreatResult.LEVELS.SAFE]:       'This QR code appears safe to open.',
+  [ThreatResult.LEVELS.SUSPICIOUS]: 'Exercise caution. Use the sandbox preview to inspect the destination before proceeding.',
+  [ThreatResult.LEVELS.MALICIOUS]:  'Do not open this link. This QR code is dangerous.',
+};
+
+function toThreatResult(raw) {
+  const riskLevel = RISK_LEVEL_BY_SERVICE_RESULT[raw.serviceResultEnum] || ThreatResult.LEVELS.SAFE;
+  const votes = raw.serviceScanResult || [];
+  const agreeing = votes.filter(v => v.serviceResult === raw.serviceResultEnum);
+  const confidenceScore = votes.length ? Math.round((agreeing.length / votes.length) * 100) : 0;
+  const onnxVote = votes.find(v => v.vendor === 'ONNX');
+
+  return new ThreatResult({
+    riskLevel,
+    confidenceScore,
+    explanation: (agreeing.length ? agreeing : votes).map(v => `${v.vendor}: ${v.reasons.join(', ')}`).join(' '),
+    recommendation: RECOMMENDATION_BY_RISK_LEVEL[riskLevel],
+    sources: votes.map(v => v.vendor),
+    mlPrediction: onnxVote?.serviceResult ?? null,
+    raw,
+  });
+}
+
+function toScanRecord(dto) {
+  return new ScanRecord({
+    scanId:       String(dto.id),
+    payload:      dto.payload,
+    payloadType:  dto.payloadType,
+    scannedAt:    dto.scannedAt,
+    threatResult: toThreatResult(dto.results),
+  });
+}
 
 export class ScanHistoryService {
   static #instance = null;
-  #records = [];
 
   static getInstance() {
     if (!ScanHistoryService.#instance) {
@@ -18,89 +59,49 @@ export class ScanHistoryService {
     return ScanHistoryService.#instance;
   }
 
-  constructor() {
-    // Seed with demo records for development
-    this.#records = [
-      new ScanRecord({
-        payload:     'https://www.dbs.com.sg/personal/default.page',
-        payloadType: 'url',
-        scannedAt:   new Date(Date.now() - 86_400_000).toISOString(),
-        threatResult: new ThreatResult({
-          riskLevel: 'safe', confidenceScore: 94,
-          explanation: 'Verified banking website.',
-          recommendation: 'Safe to open.',
-          sources: ['VirusTotal', 'Google Safe Browsing'],
-        }),
-      }),
-      new ScanRecord({
-        payload:     'http://bit.ly/3xR9mQ2',
-        payloadType: 'url',
-        scannedAt:   new Date(Date.now() - 172_800_000).toISOString(),
-        threatResult: new ThreatResult({
-          riskLevel: 'suspicious', confidenceScore: 71,
-          explanation: 'Shortened URL via HTTP.',
-          recommendation: 'Use sandbox preview before proceeding.',
-          sources: ['Rule-Based Engine'],
-        }),
-      }),
-      new ScanRecord({
-        payload:     'http://phishing-example-malware.tk/steal',
-        payloadType: 'url',
-        scannedAt:   new Date(Date.now() - 259_200_000).toISOString(),
-        threatResult: new ThreatResult({
-          riskLevel: 'malicious', confidenceScore: 97,
-          explanation: 'Known phishing and malware URL.',
-          recommendation: 'Do not open.',
-          sources: ['VirusTotal', 'PhishTank'],
-        }),
-      }),
-    ];
-  }
-
   /**
-   * Retrieves all scan records sorted by most recent first.
-   * TODO: replace with GET /api/history
+   * Retrieves all scan records for the current user, most recent first.
    * @returns {Promise<ScanRecord[]>}
    */
   async getAll() {
-    await new Promise(r => setTimeout(r, 300));
-    return [...this.#records].sort(
-      (a, b) => new Date(b.scannedAt) - new Date(a.scannedAt)
-    );
+    const dtos = await apiFetch('/api/ScanHistory');
+    return dtos.map(toScanRecord);
   }
 
   /**
-   * Saves a new scan record.
-   * TODO: replace with POST /api/history
+   * Saves a scan record to the current user's history.
    * @param {ScanRecord} record
    * @returns {Promise<ScanRecord>}
    */
   async save(record) {
-    await new Promise(r => setTimeout(r, 200));
-    const exists = this.#records.find(r => r.scanId === record.scanId);
-    if (!exists) this.#records.unshift(record);
-    return record;
+    const dto = await apiFetch('/api/ScanHistory', {
+      method: 'POST',
+      body: {
+        Payload:     record.payload,
+        PayloadType: record.payloadType,
+        Result:      record.threatResult.raw,
+      },
+    });
+    return toScanRecord(dto);
   }
 
   /**
    * Deletes a scan record by ID.
-   * TODO: replace with DELETE /api/history/:scanId
    * @param {string} scanId
    */
   async delete(scanId) {
-    await new Promise(r => setTimeout(r, 200));
-    this.#records = this.#records.filter(r => r.scanId !== scanId);
+    await apiFetch(`/api/ScanHistory/${scanId}`, { method: 'DELETE' });
   }
 
   /**
    * Searches scan records by URL substring or risk level.
-   * TODO: replace with GET /api/history?q=...
    * @param {string} query
    * @returns {Promise<ScanRecord[]>}
    */
   async search(query) {
     const q = query.toLowerCase();
-    return this.#records.filter(r =>
+    const all = await this.getAll();
+    return all.filter(r =>
       r.payload.toLowerCase().includes(q) ||
       r.threatResult.riskLevel.includes(q)
     );

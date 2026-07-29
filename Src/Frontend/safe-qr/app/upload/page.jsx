@@ -9,7 +9,6 @@ import { useRouter } from 'next/navigation';
 import { Navbar, Spinner }       from '../../components';
 import { QRScannerService }      from '../../lib/services/QRScannerService';
 import { ThreatAnalysisService } from '../../lib/services/ThreatAnalysisService';
-import { ScanHistoryService }    from '../../lib/services/ScanHistoryService';
 import { ScanRecord }            from '../../lib/models/ScanRecord';
 
 export default function UploadPage() {
@@ -24,7 +23,6 @@ export default function UploadPage() {
   const fileRef     = useRef(null);
   const scannerSvc  = QRScannerService.getInstance();
   const analysisSvc = ThreatAnalysisService.getInstance();
-  const historySvc  = ScanHistoryService.getInstance();
 
   const handleFile = f => {
     setError('');
@@ -42,7 +40,8 @@ export default function UploadPage() {
       const type     = analysisSvc.detectPayloadType(payload);
       const result   = await analysisSvc.analysePayload(payload);
       const record   = new ScanRecord({ payload, payloadType: type, threatResult: result });
-      await historySvc.save(record);
+      // Saving to history happens on the result page (single save path,
+      // avoids double-saving the same scan to the backend).
       sessionStorage.setItem('safeqr_result', JSON.stringify(record.toJSON()));
       router.push('/result');
     } catch (e) {
@@ -68,7 +67,7 @@ export default function UploadPage() {
 
   return (
     <>
-      <Navbar activePath="/upload" user={null} onLogout={() => {}} />
+      <Navbar activePath="/upload" />
       <main className="page">
         <div className="page-title">🖼 Image Upload</div>
         <div className="page-sub">

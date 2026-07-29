@@ -9,6 +9,7 @@ namespace Safe_Qr_Backend.Data
 
         public DbSet<UrlReport> UrlReport => Set<UrlReport>();
         public DbSet<User> User => Set<User>();
+        public DbSet<ScanHistory> ScanHistory => Set<ScanHistory>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

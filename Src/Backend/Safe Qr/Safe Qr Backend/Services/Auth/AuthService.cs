@@ -45,7 +45,7 @@ namespace Safe_Qr_Backend.Services.Auth
 
 
             };
-            var identity = new ClaimsIdentity(claims);
+            var identity = new ClaimsIdentity(claims, "LoginCookie");
             var principal = new ClaimsPrincipal(identity);
 
 

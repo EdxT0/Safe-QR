@@ -7,20 +7,28 @@
 import { useState, useEffect } from 'react';
 import { useRouter }           from 'next/navigation';
 import { Navbar, RiskBadge, WarningModal, Spinner } from '../../components';
+import { useUser }             from '../../components/UserContext';
 import { ScanHistoryService }  from '../../lib/services/ScanHistoryService';
+import { SandboxService }      from '../../lib/services/SandboxService';
 import { ScanRecord }          from '../../lib/models/ScanRecord';
 import { ThreatResult }        from '../../lib/models/ThreatResult';
 
 export default function ResultPage() {
   const router = useRouter();
+  const { user } = useUser();
 
   const [record,         setRecord]         = useState(null);
   const [showModal,      setShowModal]      = useState(false);
   const [sandboxOpen,    setSandboxOpen]    = useState(false);
+  const [sandboxLoading, setSandboxLoading] = useState(false);
+  const [sandboxImage,   setSandboxImage]   = useState('');
+  const [sandboxError,   setSandboxError]   = useState('');
   const [saving,         setSaving]         = useState(false);
   const [saved,          setSaved]          = useState(false);
+  const [saveError,      setSaveError]      = useState('');
 
   const historySvc = ScanHistoryService.getInstance();
+  const sandboxSvc = SandboxService.getInstance();
 
   // Load result from sessionStorage on mount
   useEffect(() => {
@@ -33,17 +41,41 @@ export default function ResultPage() {
     }));
   }, []);
 
+  const openSandbox = async () => {
+    setSandboxOpen(true);
+    setSandboxError('');
+    setSandboxLoading(true);
+    try {
+      const image = await sandboxSvc.capturePreview(payload);
+      setSandboxImage(image);
+    } catch (e) {
+      setSandboxError(e.message || 'Could not render a preview of this page.');
+    } finally {
+      setSandboxLoading(false);
+    }
+  };
+
   const handleSave = async () => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    setSaveError('');
     setSaving(true);
-    await historySvc.save(record);
-    setSaving(false);
-    setSaved(true);
+    try {
+      await historySvc.save(record);
+      setSaved(true);
+    } catch (e) {
+      setSaveError(e.message || 'Could not save this result. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!record) {
     return (
       <>
-        <Navbar activePath="/result" user={null} onLogout={() => {}} />
+        <Navbar activePath="/result" />
         <main className="page" style={{ textAlign: 'center', paddingTop: 80 }}>
           <Spinner />
         </main>
@@ -62,7 +94,7 @@ export default function ResultPage() {
 
   return (
     <>
-      <Navbar activePath="/result" user={null} onLogout={() => {}} />
+      <Navbar activePath="/result" />
       <main className="page">
         <div className="page-title">🛡 Safety Result</div>
         <div className="page-sub">Threat analysis complete. Review your result below.</div>
@@ -71,7 +103,7 @@ export default function ResultPage() {
         {showModal && (
           <WarningModal
             url={payload}
-            onConfirm={() => { setShowModal(false); setSandboxOpen(true); }}
+            onConfirm={() => { setShowModal(false); openSandbox(); }}
             onCancel={() => setShowModal(false)}
           />
         )}
@@ -156,20 +188,34 @@ export default function ResultPage() {
             </div>
             {sandboxOpen && (
               <div className="sandbox-frame">
-                <div className="sandbox-msg">
-                  🔒 Sandbox active<br />
-                  <span style={{ fontSize: 11, opacity: 0.7 }}>
-                    Cookies, storage, and device access are blocked.
-                  </span>
-                  <br /><br />
-                  <code style={{ fontSize: 11, color: 'var(--text-muted)', wordBreak: 'break-all' }}>
-                    {payload}
-                  </code>
-                </div>
+                {sandboxLoading ? (
+                  <div className="sandbox-msg">
+                    <Spinner /><br />
+                    Rendering an isolated preview…
+                  </div>
+                ) : sandboxError ? (
+                  <div className="sandbox-msg">
+                    ⚠️ {sandboxError}
+                  </div>
+                ) : (
+                  <div style={{ width: '100%', padding: 10 }}>
+                    <img
+                      src={sandboxImage}
+                      alt={`Sandboxed preview of ${payload}`}
+                      style={{ width: '100%', borderRadius: 'var(--radius)', display: 'block' }}
+                    />
+                    <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8, textAlign: 'center' }}>
+                      🔒 Static screenshot rendered in an isolated backend browser — this
+                      page's own HTML/JS never reached your browser.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
         )}
+
+        {saveError && <div className="error-msg" style={{ marginTop: 16 }}>{saveError}</div>}
 
         {/* Action buttons */}
         <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
@@ -182,7 +228,7 @@ export default function ResultPage() {
           </button>
           {!saved ? (
             <button className="btn btn-secondary" onClick={handleSave} disabled={saving}>
-              {saving ? <Spinner /> : '💾 Save'}
+              {saving ? <Spinner /> : user ? '💾 Save' : '🔒 Sign in to Save'}
             </button>
           ) : (
             <button className="btn btn-secondary" disabled style={{ color: 'var(--safe)' }}>

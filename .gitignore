@@ -589,4 +589,5 @@ local.yml
 # Allow examples
 !*.local.example
 !*.local.sample
-!*.local.template
+!*.local.template".claude/" 
+".claude/" 

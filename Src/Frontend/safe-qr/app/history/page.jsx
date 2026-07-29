@@ -6,10 +6,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter }           from 'next/navigation';
 import { Navbar, ScanHistoryCard, DeleteModal, EmptyState, Spinner } from '../../components';
+import { useUser }             from '../../components/UserContext';
 import { ScanHistoryService }  from '../../lib/services/ScanHistoryService';
 
 export default function HistoryPage() {
   const router = useRouter();
+  const { user, loading: userLoading } = useUser();
 
   const [records,  setRecords]  = useState([]);
   const [loading,  setLoading]  = useState(true);
@@ -26,7 +28,24 @@ export default function HistoryPage() {
     setLoading(false);
   };
 
-  useEffect(() => { loadRecords(); }, []);
+  // History is scoped to the logged-in user on the backend — bounce
+  // signed-out visitors to /login rather than let every call 401.
+  useEffect(() => {
+    if (userLoading) return;
+    if (!user) { router.replace('/login'); return; }
+    loadRecords();
+  }, [userLoading, user]);
+
+  if (userLoading || !user) {
+    return (
+      <>
+        <Navbar activePath="/history" />
+        <main className="page" style={{ textAlign: 'center', paddingTop: 80 }}>
+          <Spinner />
+        </main>
+      </>
+    );
+  }
 
   const confirmDelete = async () => {
     await historySvc.delete(deleteId);
@@ -52,7 +71,7 @@ export default function HistoryPage() {
 
   return (
     <>
-      <Navbar activePath="/history" user={null} onLogout={() => {}} />
+      <Navbar activePath="/history" />
       <main className="page">
         <div className="page-title">📋 Scan History</div>
         <div className="page-sub">

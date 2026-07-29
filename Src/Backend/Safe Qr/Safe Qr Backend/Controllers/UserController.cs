@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Safe_Qr_Backend.DTO.UserController;
 using Safe_Qr_Backend.Result;
@@ -38,7 +38,8 @@ namespace Safe_Qr_Backend.Controllers
             }
             else if (result.Reasons == ResultEnum.Successful)
             {
-                return Ok(result.Value);
+                var user = result.Value!;
+                return Ok(new UserPublicDTO(user.Id, user.Name, user.Email, user.Role.ToString()));
             }
             else
             {
@@ -57,11 +58,37 @@ namespace Safe_Qr_Backend.Controllers
             {
                 return NotFound("Email/Password Incorrect");
             }
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, userPrincipal, new AuthenticationProperties
+            await HttpContext.SignInAsync("LoginCookie", userPrincipal, new AuthenticationProperties
             {
                 IsPersistent = false
             });
-            return Ok($"User {userLoginDetails.Email}, logged in");
+
+            var user = new UserPublicDTO(
+                int.Parse(userPrincipal.FindFirst(ClaimTypes.NameIdentifier)!.Value),
+                userPrincipal.FindFirst(ClaimTypes.Name)!.Value,
+                userPrincipal.FindFirst(ClaimTypes.Email)!.Value,
+                userPrincipal.FindFirst(ClaimTypes.Role)!.Value);
+
+            return Ok(user);
+        }
+
+        [HttpGet("Me")]
+        [Authorize]
+        public IActionResult Me()
+        {
+            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (idClaim == null)
+            {
+                return Unauthorized();
+            }
+
+            var user = new UserPublicDTO(
+                int.Parse(idClaim.Value),
+                User.FindFirst(ClaimTypes.Name)?.Value ?? string.Empty,
+                User.FindFirst(ClaimTypes.Email)?.Value ?? string.Empty,
+                User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty);
+
+            return Ok(user);
         }
 
         [HttpGet("Logout")]

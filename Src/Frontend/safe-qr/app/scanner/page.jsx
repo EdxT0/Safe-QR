@@ -4,62 +4,66 @@
  * Allows the user to scan a QR code using the device camera.
  * Uses QRScannerService for camera access and ThreatAnalysisService for analysis.
  */
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Navbar, Spinner }         from '../../components';
 import { QRScannerService }        from '../../lib/services/QRScannerService';
 import { ThreatAnalysisService }   from '../../lib/services/ThreatAnalysisService';
-import { ScanHistoryService }      from '../../lib/services/ScanHistoryService';
 import { ScanRecord }              from '../../lib/models/ScanRecord';
+
+const CAMERA_REGION_ID = 'qr-camera-region';
 
 export default function ScannerPage() {
   const router = useRouter();
 
   const [cameraActive, setCameraActive] = useState(false);
-  const [stream,       setStream]       = useState(null);
   const [starting,     setStarting]     = useState(false);
   const [analysing,    setAnalysing]    = useState(false);
   const [demoTarget,   setDemoTarget]   = useState('');
   const [cameraError,  setCameraError]  = useState('');
 
-  const videoRef    = useRef(null);
   const scannerSvc  = QRScannerService.getInstance();
   const analysisSvc = ThreatAnalysisService.getInstance();
-  const historySvc  = ScanHistoryService.getInstance();
 
-  // Stop camera stream on unmount
-  useEffect(() => () => scannerSvc.stopCameraScanner(stream), [stream]);
-
-  const startCamera = async () => {
-    setCameraError('');
+  // Starts/stops the real camera scan whenever cameraActive flips —
+  // the container div must be rendered (i.e. cameraActive already true)
+  // before html5-qrcode can attach to it by element id.
+  useEffect(() => {
+    if (!cameraActive) return;
+    let cancelled = false;
     setStarting(true);
-    try {
-      const s = await scannerSvc.startCameraScanner(videoRef);
-      setStream(s);
-      setCameraActive(true);
-    } catch (e) {
-      setCameraError(e.message);
-    } finally {
-      setStarting(false);
-    }
+
+    scannerSvc.startCameraScan(CAMERA_REGION_ID, (decodedText) => {
+      if (cancelled) return;
+      setCameraActive(false);
+      analyseAndGo(decodedText);
+    })
+      .catch(e => { if (!cancelled) { setCameraError(e.message); setCameraActive(false); } })
+      .finally(() => { if (!cancelled) setStarting(false); });
+
+    return () => {
+      cancelled = true;
+      scannerSvc.stopCameraScan();
+    };
+  }, [cameraActive]);
+
+  const startCamera = () => {
+    setCameraError('');
+    setCameraActive(true);
   };
 
   const stopCamera = () => {
-    scannerSvc.stopCameraScanner(stream);
     setCameraActive(false);
-    setStream(null);
   };
 
-  const captureAndAnalyse = async (overridePayload = null) => {
+  const analyseAndGo = async (payload) => {
     setAnalysing(true);
     try {
-      const payload = overridePayload ?? await scannerSvc.decodeFromCamera();
-      const type    = analysisSvc.detectPayloadType(payload);
-      const result  = await analysisSvc.analysePayload(payload);
-      const record  = new ScanRecord({ payload, payloadType: type, threatResult: result });
-      await historySvc.save(record);
-      stopCamera();
-      // Pass result to result page via sessionStorage
+      const type   = analysisSvc.detectPayloadType(payload);
+      const result = await analysisSvc.analysePayload(payload);
+      const record = new ScanRecord({ payload, payloadType: type, threatResult: result });
+      // Saving to history happens on the result page (single save path,
+      // avoids double-saving the same scan to the backend).
       sessionStorage.setItem('safeqr_result', JSON.stringify(record.toJSON()));
       router.push('/result');
     } catch (e) {
@@ -79,7 +83,7 @@ export default function ScannerPage() {
 
   return (
     <>
-      <Navbar activePath="/scanner" user={null} onLogout={() => {}} />
+      <Navbar activePath="/scanner" />
       <main className="page">
         <div className="page-title">📷 QR Scanner</div>
         <div className="page-sub">
@@ -89,45 +93,46 @@ export default function ScannerPage() {
         {/* Camera section */}
         {!cameraActive ? (
           <div className="card">
-            <div
-              className="scan-zone"
-              onClick={startCamera}
-              style={starting ? { pointerEvents: 'none', opacity: 0.6 } : {}}
-            >
+            <div className="scan-zone" onClick={startCamera}>
               <span className="scan-zone-icon">📷</span>
               <h3>Activate Camera Scanner</h3>
               <p>Click to start live QR scanning with your device camera</p>
-              {starting && <div style={{ marginTop: 16 }}><Spinner /></div>}
             </div>
             {cameraError && <div className="error-msg" style={{ marginTop: 14 }}>{cameraError}</div>}
           </div>
         ) : (
           <div className="card">
-            <div className="camera-box">
-              <video ref={videoRef} autoPlay playsInline muted />
-              <div className="scan-overlay">
-                <div className="scan-frame">
-                  <span />
-                  <div className="scan-line" />
+            {/* html5-qrcode owns this node's DOM directly (video/canvas it
+                creates itself) — it must never contain React-rendered
+                children, or React's reconciliation will conflict with it. */}
+            <div style={{ position: 'relative' }}>
+              <div className="camera-box" id={CAMERA_REGION_ID} />
+              {starting && (
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Spinner />
                 </div>
-              </div>
+              )}
             </div>
-            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-              <button
-                className="btn btn-primary"
-                style={{ flex: 1 }}
-                onClick={() => captureAndAnalyse()}
-                disabled={analysing}
-              >
-                {analysing ? <><Spinner /> Analysing…</> : '⚡ Capture & Scan'}
+            <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-muted)', marginTop: 12 }}>
+              {analysing
+                ? <><Spinner /> Analysing detected code…</>
+                : starting
+                  ? 'Starting camera…'
+                  : 'Point your camera at a QR code — it scans automatically.'}
+            </p>
+            <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={stopCamera} disabled={analysing}>
+                Stop
               </button>
-              <button className="btn btn-secondary" onClick={stopCamera}>Stop</button>
             </div>
             {cameraError && <div className="error-msg" style={{ marginTop: 12 }}>{cameraError}</div>}
           </div>
         )}
 
-        {/* Demo payloads */}
+        {/* Demo payloads — hidden for production; uncomment to re-enable for testing/demos.
         <div className="card mt-4">
           <div className="label" style={{ marginBottom: 12 }}>
             Demo Payloads — simulate a scan result
@@ -141,7 +146,7 @@ export default function ScannerPage() {
                 disabled={analysing}
                 onClick={() => {
                   setDemoTarget(payload);
-                  captureAndAnalyse(payload);
+                  analyseAndGo(payload);
                 }}
               >
                 {label}
@@ -150,6 +155,7 @@ export default function ScannerPage() {
             ))}
           </div>
         </div>
+        */}
 
         {/* Switch to upload */}
         <div className="card mt-4" style={{ textAlign: 'center' }}>
