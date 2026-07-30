@@ -32,10 +32,6 @@ namespace Safe_Qr_Backend.Controllers
             {
                 return Conflict("User already exists");
             }
-            else if (result.Reasons == ResultEnum.RoleDoesNotExist)
-            {
-                return BadRequest("Role does not exist");
-            }
             else if (result.Reasons == ResultEnum.Successful)
             {
                 var user = result.Value!;

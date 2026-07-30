@@ -125,6 +125,7 @@ export function Navbar({ activePath }) {
     { href: '/scanner', label: 'Scanner' },
     { href: '/upload',  label: 'Upload'  },
     { href: '/history', label: 'History' },
+    ...(user?.isAdmin() ? [{ href: '/admin', label: 'Admin' }] : []),
   ];
 
   return (

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.ML.OnnxRuntime;
 using Safe_Qr_Backend.Data;
+using Safe_Qr_Backend.Entities;
 using Safe_Qr_Backend.DTO.GoogleSafeBrowsingDTO;
 using Safe_Qr_Backend.DTO.UserController;
 using Safe_Qr_Backend.Repository.Repository.Users;
@@ -22,7 +23,7 @@ namespace Safe_Qr_Backend
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
 
             var builder = WebApplication.CreateBuilder(args);
@@ -116,6 +117,9 @@ namespace Safe_Qr_Backend
 
             builder.Services.AddSingleton<Safe_Qr_Backend.Services.Sandbox.ISandboxScreenshotService, Safe_Qr_Backend.Services.Sandbox.SandboxScreenshotService>();
 
+            builder.Services.AddScoped<Safe_Qr_Backend.Repository.ThreatFeedbacks.IThreatFeedbackRepository, Safe_Qr_Backend.Repository.ThreatFeedbacks.ThreatFeedbackRepository>();
+            builder.Services.AddScoped<Safe_Qr_Backend.Services.ThreatFeedbacks.IThreatFeedbackService, Safe_Qr_Backend.Services.ThreatFeedbacks.ThreatFeedbackService>();
+
 
 
 
@@ -141,7 +145,9 @@ namespace Safe_Qr_Backend
 
             app.MapControllers();
 
-            app.Run();
+            await SeedAdminUserAsync(app);
+
+            await app.RunAsync();
 
             //var modelPath = Path.Combine(AppContext.BaseDirectory, "Models", "model.onnx");
             //var options = new Microsoft.ML.OnnxRuntime.SessionOptions
@@ -158,6 +164,45 @@ namespace Safe_Qr_Backend
             //{
             //    Console.WriteLine(result[i]);
             //}
+        }
+
+        /// <summary>
+        /// Idempotently ensures exactly one Admin account exists, from Admin:Email /
+        /// Admin:Password / Admin:Name config (set via user-secrets, never appsettings.json).
+        /// Admin accounts can't be created through public registration — this is the
+        /// only path that creates one. Skips silently if the config isn't set.
+        /// </summary>
+        private static async Task SeedAdminUserAsync(WebApplication app)
+        {
+            using var scope = app.Services.CreateScope();
+            var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+
+            var adminEmail = config["Admin:Email"];
+            var adminPassword = config["Admin:Password"];
+            if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+            {
+                return;
+            }
+
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var alreadyExists = await db.User.AnyAsync(u => u.Email == adminEmail);
+            if (alreadyExists)
+            {
+                return;
+            }
+
+            var hasher = scope.ServiceProvider.GetRequiredService<PasswordHasher<User>>();
+            var admin = new User
+            {
+                Name = config["Admin:Name"] ?? "Administrator",
+                Email = adminEmail,
+                Role = UserRoleEnum.Admin,
+                HashedPassword = string.Empty,
+            };
+            admin.HashedPassword = hasher.HashPassword(admin, adminPassword);
+
+            db.User.Add(admin);
+            await db.SaveChangesAsync();
         }
     }
 }

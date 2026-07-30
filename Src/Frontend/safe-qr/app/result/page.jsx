@@ -10,6 +10,7 @@ import { Navbar, RiskBadge, WarningModal, Spinner } from '../../components';
 import { useUser }             from '../../components/UserContext';
 import { ScanHistoryService }  from '../../lib/services/ScanHistoryService';
 import { SandboxService }      from '../../lib/services/SandboxService';
+import { FeedbackService }     from '../../lib/services/FeedbackService';
 import { ScanRecord }          from '../../lib/models/ScanRecord';
 import { ThreatResult }        from '../../lib/models/ThreatResult';
 
@@ -27,8 +28,16 @@ export default function ResultPage() {
   const [saved,          setSaved]          = useState(false);
   const [saveError,      setSaveError]      = useState('');
 
-  const historySvc = ScanHistoryService.getInstance();
-  const sandboxSvc = SandboxService.getInstance();
+  const [feedbackOpen,      setFeedbackOpen]      = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [feedbackError,     setFeedbackError]     = useState('');
+  const [reportedRiskLevel, setReportedRiskLevel] = useState('');
+  const [feedbackComment,   setFeedbackComment]   = useState('');
+
+  const historySvc  = ScanHistoryService.getInstance();
+  const sandboxSvc  = SandboxService.getInstance();
+  const feedbackSvc = FeedbackService.getInstance();
 
   // Load result from sessionStorage on mount
   useEffect(() => {
@@ -69,6 +78,37 @@ export default function ResultPage() {
       setSaveError(e.message || 'Could not save this result. Please try again.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openFeedbackForm = () => {
+    // Reporting a misclassification doesn't require an account — anyone
+    // who sees a scan result can flag it, matching the anonymous scan flow.
+    setFeedbackError('');
+    setFeedbackOpen(true);
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (!reportedRiskLevel) {
+      setFeedbackError('Please select what you believe the correct classification should be.');
+      return;
+    }
+    setFeedbackError('');
+    setFeedbackSubmitting(true);
+    try {
+      await feedbackSvc.submitFeedback({
+        payload:              record.payload,
+        payloadType:          record.payloadType,
+        systemClassification: record.threatResult.raw,
+        reportedRiskLevel,
+        comment:              feedbackComment,
+      });
+      setFeedbackSubmitted(true);
+      setFeedbackOpen(false);
+    } catch (e) {
+      setFeedbackError(e.message || 'Could not submit your report. Please try again.');
+    } finally {
+      setFeedbackSubmitting(false);
     }
   };
 
@@ -214,6 +254,76 @@ export default function ResultPage() {
             )}
           </div>
         )}
+
+        {/* Report incorrect classification (US-06) */}
+        <div className="card mt-4">
+          <div className="flex-between" style={{ marginBottom: feedbackOpen ? 12 : 0 }}>
+            <div>
+              <div className="label" style={{ marginBottom: 2 }}>Think this classification is wrong?</div>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                Help improve Safe QR by reporting misclassifications.
+              </p>
+            </div>
+            {!feedbackOpen && !feedbackSubmitted && (
+              <button className="btn btn-secondary btn-sm" onClick={openFeedbackForm}>
+                🚩 Report
+              </button>
+            )}
+          </div>
+
+          {feedbackSubmitted && (
+            <p style={{ color: 'var(--safe)', fontSize: 13, fontWeight: 500 }}>
+              ✅ Thanks — your report has been submitted for review.
+            </p>
+          )}
+
+          {feedbackOpen && !feedbackSubmitted && (
+            <>
+              <div className="field">
+                <label htmlFor="reportedRiskLevel">What should this be classified as?</label>
+                <select
+                  id="reportedRiskLevel"
+                  className="input"
+                  value={reportedRiskLevel}
+                  onChange={e => setReportedRiskLevel(e.target.value)}
+                >
+                  <option value="">Select a classification…</option>
+                  <option value="safe">Safe</option>
+                  <option value="suspicious">Suspicious</option>
+                  <option value="malicious">Malicious</option>
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="feedbackComment">Additional details (optional)</label>
+                <textarea
+                  id="feedbackComment"
+                  className="input"
+                  rows={3}
+                  placeholder="Why do you believe this classification is incorrect?"
+                  value={feedbackComment}
+                  onChange={e => setFeedbackComment(e.target.value)}
+                />
+              </div>
+              {feedbackError && <div className="error-msg" style={{ marginBottom: 12 }}>{feedbackError}</div>}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setFeedbackOpen(false)}
+                  disabled={feedbackSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-warn btn-sm"
+                  onClick={handleSubmitFeedback}
+                  disabled={feedbackSubmitting}
+                >
+                  {feedbackSubmitting ? <Spinner /> : 'Submit Report'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
 
         {saveError && <div className="error-msg" style={{ marginTop: 16 }}>{saveError}</div>}
 

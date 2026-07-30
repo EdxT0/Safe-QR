@@ -68,7 +68,7 @@ export class AuthService {
     try {
       await apiFetch('/api/User/Create', {
         method: 'POST',
-        body: { Name: fullName, Email: email, Password: password, role: 'user' },
+        body: { Name: fullName, Email: email, Password: password },
       });
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {

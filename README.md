@@ -119,13 +119,74 @@ Open http://localhost:3000 — it redirects straight to the scanner page.
 
 > If your frontend runs on a port other than 3000, the backend's CORS policy needs to know about it. Either set an environment variable / `appsettings` entry for `FrontendOrigins` as a string array (see `Program.cs`), or it defaults to allowing `http://localhost:3000` only.
 
+## Updating an existing checkout
+
+If you already had Safe-QR cloned and set up, and are pulling this update, **skip the fresh-clone [Setup](#setup) above** and do this instead.
+
+### What's new
+
+- Per-user scan history (`ScanHistory` table), a real QR camera/upload scanner (html5-qrcode), and an isolated backend sandbox preview (PuppeteerSharp headless Chromium).
+- Misclassification reporting (US-06) — a "🚩 Report" button on scan results, open to anyone, no login required.
+- An Admin-only dashboard at `/admin` — system analytics and exportable threat/feedback reports (US-07, US-08).
+- **Security fix:** public registration (`/register`) can no longer create an Admin account. Every signup is now hardcoded to `role: User` — there is no longer any way to self-elevate through the API.
+
+### Steps
+
+1. **Pull the latest code**
+   ```bash
+   git pull
+   ```
+
+2. **Rebuild the backend** — picks up the new PuppeteerSharp package
+   ```bash
+   cd "Src/Backend/Safe Qr/Safe Qr Backend"
+   dotnet build
+   ```
+
+3. **Apply the new migrations**
+   ```bash
+   dotnet ef database update
+   ```
+   This adds the `ScanHistory` and `ThreatFeedback` tables (if you didn't already have them from a partial earlier pull) and makes `ThreatFeedback.UserId` nullable.
+
+4. **Set up an Admin account (new, required for `/admin`)**
+
+   Since registration can no longer create Admins, the backend instead seeds exactly one Admin account on startup, from config — but only if `Admin:Email` / `Admin:Password` are set and no user with that email exists yet:
+   ```bash
+   dotnet user-secrets set "Admin:Email" "admin@yourdomain.local"
+   dotnet user-secrets set "Admin:Password" "choose-a-strong-password"
+   dotnet user-secrets set "Admin:Name" "Site Administrator"
+   ```
+   If you skip this, no Admin account exists and `/admin` is unreachable for everyone — that's the safe default, not a bug.
+
+   > ⚠️ **Check for pre-existing Admin accounts.** Before this fix, anyone could self-register with `role: "admin"`. If that ever happened on your database, that account is still an Admin — migrations don't touch existing rows. Check and demote if needed:
+   > ```sql
+   > SELECT "Id", "Name", "Email", "Role" FROM "User" WHERE "Role" = 'Admin';
+   > UPDATE "User" SET "Role" = 'User' WHERE "Id" = <id>;
+   > ```
+
+5. **Restart the backend**
+   ```bash
+   dotnet run
+   ```
+   The first time anyone opens **Sandbox Preview**, the backend auto-downloads a headless Chromium build (needs internet, takes a minute or two once; instant after that).
+
+6. **Frontend** — no new required steps or environment variables. `npm install` (in case anything changed) and `npm run dev` as usual.
+
+7. **Verify the update took**
+   - Register a brand-new test account — it should always come back `role: User`, even if you try to force `role: "admin"` in the request body.
+   - Log in as your seeded Admin and open `/admin` — analytics + reports should load; log in as a non-admin and try `/admin` — you should get redirected away instead.
+   - On any scan result, click "🚩 Report" while signed out — it should work with no login prompt.
+
 ## Verifying it works
 
 1. Go to http://localhost:3000/register and create an account.
-2. You're redirected to the scanner — click one of the **Demo Payloads** (or scan/upload a real QR code containing a URL).
+2. You're redirected to the scanner — scan a real QR code (camera or **Switch to Image Upload**) that encodes a URL. (The old "Demo Payloads" shortcut buttons are commented out in `app/scanner/page.jsx` for production — uncomment them there if you want canned examples for a demo.)
 3. You should see a real result pulled from Google Safe Browsing, VirusTotal, the ONNX model, and the in-house engine — not a canned/mocked response.
 4. Click **Save**, then go to **History** — the scan should appear, backed by the `ScanHistory` table in Postgres (scoped to your logged-in user).
 5. For a suspicious/malicious result, try **Open Sandbox** — this calls the backend's isolated headless-browser screenshot service and shows a real rendered image of the page.
+6. Click **🚩 Report** on any result — this works even signed out, and stores the report in `ThreatFeedback`.
+7. Log in as your seeded Admin account (see [Updating an existing checkout](#updating-an-existing-checkout) if you haven't set one up) and open `/admin` — you should see live analytics and both report tables, each with a working CSV export.
 
 ## Project structure
 
@@ -135,10 +196,18 @@ Src/
   Frontend/safe-qr/                  Next.js app (app/, components/, lib/services/)
 ```
 
-Key backend endpoints: `POST /api/Scan`, `GET/POST/DELETE /api/ScanHistory`, `POST /api/User/{Create,Login,Logout}`, `GET /api/User/Me`, `POST /api/Sandbox/preview`, `GET /api/UrlReport/*`.
+Key backend endpoints:
+- `POST /api/Scan` — public, runs a URL through the threat pipeline
+- `GET/POST/DELETE /api/ScanHistory` — requires login, scoped to the caller
+- `POST /api/User/{Create,Login,Logout}`, `GET /api/User/Me`
+- `POST /api/Sandbox/preview` — public, isolated headless-browser screenshot
+- `POST /api/ThreatFeedback` — public (login optional; attributes the report when a session exists)
+- `GET /api/UrlReport/*`, `GET /api/ThreatFeedback` — **Admin-only** (`[Authorize(Roles = "Admin")]`)
 
 ## Troubleshooting
 
 - **Login/register returns 500, or `NetworkError when attempting to fetch resource`** — see the Firefox cert-trust note above; also confirm the backend is actually running (`dotnet run` in the backend folder) and the ports in `.env.local` match `launchSettings.json`.
 - **"Could not copy ... .exe" build error** — the backend is already running (in another terminal, or Visual Studio's debugger) and has the build output locked. Stop it before rebuilding.
 - **Sandbox preview fails for a specific URL** — the backend refuses non-http(s) schemes and any hostname resolving to a private/loopback/link-local address (basic SSRF guard), and times out after 20s for pages that are too slow to load.
+- **`/admin` redirects you away, or the "Admin" nav link never shows up** — either you're not logged in as an Admin, or no Admin account was ever seeded. Set `Admin:Email` / `Admin:Password` via `dotnet user-secrets` (see [Updating an existing checkout](#updating-an-existing-checkout)) and restart the backend — it only seeds the account if it doesn't already exist, so this is safe to run again.
+- **`GET /api/UrlReport/...` or `/api/ThreatFeedback` returns 403** — expected if you're logged in but not an Admin. A 401 instead means you're not logged in at all.

@@ -18,29 +18,14 @@ namespace Safe_Qr_Backend.Services.Users
 
         public async Task<Result<User>> CreateUserAsync(UserCreateDTO userCreateDTO, CancellationToken ct)
         {
-            UserRoleEnum roleGiven;
-            switch (userCreateDTO.role.ToLower())
-            {
-                case "admin":
-                    roleGiven = UserRoleEnum.Admin;
-                    break;
-                case "user":
-                    roleGiven = UserRoleEnum.User;
-                    break;
-                case "test":
-                    roleGiven = UserRoleEnum.Test;
-                    break;
-                default:
-                    return Result<User>.Failure(ResultEnum.RoleDoesNotExist);
-            };
-
+            // Public registration can only ever create a User account — Admin accounts
+            // are seeded separately (see Program.cs) so this endpoint can't be used to
+            // self-elevate.
             var userHashedPassword = _passwordHasher.HashPassword(userCreateDTO, userCreateDTO.Password);
 
-            var user = new User() { Name = userCreateDTO.Name, Email = userCreateDTO.Email, Role = roleGiven, HashedPassword = userHashedPassword };
+            var user = new User() { Name = userCreateDTO.Name, Email = userCreateDTO.Email, Role = UserRoleEnum.User, HashedPassword = userHashedPassword };
 
             return await _userRepository.CreateUserAsync(user, ct);
-
-           
         }
     }
 }

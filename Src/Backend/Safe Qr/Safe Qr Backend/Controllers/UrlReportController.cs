@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Safe_Qr_Backend.Services.UrlReports;
 using Safe_Qr_Backend.Services.UrlScans;
 
@@ -6,7 +7,7 @@ namespace Safe_Qr_Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    //[Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class UrlReportController : ControllerBase
     {
 
