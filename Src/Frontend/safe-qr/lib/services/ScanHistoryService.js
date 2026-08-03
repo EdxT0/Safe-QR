@@ -11,13 +11,14 @@ import { apiFetch }     from '../api';
 const RISK_LEVEL_BY_SERVICE_RESULT = {
   safe:       ThreatResult.LEVELS.SAFE,
   suspicious: ThreatResult.LEVELS.SUSPICIOUS,
-  highRisk:   ThreatResult.LEVELS.SUSPICIOUS,
+  highRisk:   ThreatResult.LEVELS.HIGH_RISK,
   malicious:  ThreatResult.LEVELS.MALICIOUS,
 };
 
 const RECOMMENDATION_BY_RISK_LEVEL = {
   [ThreatResult.LEVELS.SAFE]:       'This QR code appears safe to open.',
   [ThreatResult.LEVELS.SUSPICIOUS]: 'Exercise caution. Use the sandbox preview to inspect the destination before proceeding.',
+  [ThreatResult.LEVELS.HIGH_RISK]:  'Strong phishing indicators detected. Avoid entering any personal information — use the sandbox preview if you need to inspect it.',
   [ThreatResult.LEVELS.MALICIOUS]:  'Do not open this link. This QR code is dangerous.',
 };
 

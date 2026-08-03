@@ -14,10 +14,10 @@ import { AdminService } from '../../lib/services/AdminService';
 import { downloadCsv } from '../../lib/csv';
 
 const VERDICT_STYLE = {
-  safe:       { color: 'var(--safe)',    label: 'Safe' },
-  suspicious: { color: 'var(--warn)',    label: 'Suspicious' },
-  highRisk:   { color: 'var(--warn)',    label: 'High Risk' },
-  malicious:  { color: 'var(--danger)',  label: 'Malicious' },
+  safe:       { color: 'var(--safe)',      label: 'Safe' },
+  suspicious: { color: 'var(--warn)',      label: 'Suspicious' },
+  highRisk:   { color: 'var(--high-risk)', label: 'High Risk' },
+  malicious:  { color: 'var(--danger)',    label: 'Malicious' },
 };
 
 function Verdict({ value }) {

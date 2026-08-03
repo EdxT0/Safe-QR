@@ -127,10 +127,11 @@ export default function ResultPage() {
   const glowColor = {
     safe:       'rgba(0,200,150,0.12)',
     suspicious: 'rgba(245,166,35,0.12)',
+    highRisk:   'rgba(255,107,53,0.12)',
     malicious:  'rgba(232,50,90,0.12)',
   }[result.riskLevel];
 
-  const heroIcon = { safe: '✅', suspicious: '⚠️', malicious: '🚫' }[result.riskLevel];
+  const heroIcon = { safe: '✅', suspicious: '⚠️', highRisk: '🔺', malicious: '🚫' }[result.riskLevel];
 
   return (
     <>
@@ -204,8 +205,8 @@ export default function ResultPage() {
           </div>
         </div>
 
-        {/* Sandbox preview — shown for suspicious/malicious URLs only */}
-        {(result.isSuspicious() || result.isMalicious()) && payloadType === 'url' && (
+        {/* Sandbox preview — shown for suspicious/high-risk/malicious URLs only */}
+        {(result.isSuspicious() || result.isHighRisk() || result.isMalicious()) && payloadType === 'url' && (
           <div className="card mt-4">
             <div
               className="flex-between"
@@ -290,6 +291,7 @@ export default function ResultPage() {
                   <option value="">Select a classification…</option>
                   <option value="safe">Safe</option>
                   <option value="suspicious">Suspicious</option>
+                  <option value="highRisk">High Risk</option>
                   <option value="malicious">Malicious</option>
                 </select>
               </div>

@@ -15,7 +15,7 @@ export function Spinner() {
 
 // ── RiskBadge ─────────────────────────────────────────────────────────────────
 export function RiskBadge({ level }) {
-  const labels = { safe: 'Safe', suspicious: 'Suspicious', malicious: 'Malicious' };
+  const labels = { safe: 'Safe', suspicious: 'Suspicious', highRisk: 'High Risk', malicious: 'Malicious' };
   return (
     <span className={`risk-badge ${level}`}>
       <span className="risk-dot" />
@@ -81,7 +81,7 @@ export function DeleteModal({ onConfirm, onCancel }) {
 // ── ScanHistoryCard ───────────────────────────────────────────────────────────
 export function ScanHistoryCard({ record, onDelete }) {
   const icons = {
-    safe: '✅', suspicious: '⚠️', malicious: '🚫',
+    safe: '✅', suspicious: '⚠️', highRisk: '🔺', malicious: '🚫',
     wifi: '📶', email: '📧', sms: '💬', telephone: '📞',
   };
   const icon = icons[record.threatResult.riskLevel] || '🔗';

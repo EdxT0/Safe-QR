@@ -22,7 +22,7 @@ export class FeedbackService {
    * @param {string} params.payload - the scanned URL/QR content
    * @param {string} params.payloadType
    * @param {object} params.systemClassification - the raw AggregatedFinalResult the backend returned
-   * @param {'safe'|'suspicious'|'malicious'} params.reportedRiskLevel - what the user believes it should be
+   * @param {'safe'|'suspicious'|'highRisk'|'malicious'} params.reportedRiskLevel - what the user believes it should be
    * @param {string} [params.comment]
    */
   async submitFeedback({ payload, payloadType, systemClassification, reportedRiskLevel, comment }) {

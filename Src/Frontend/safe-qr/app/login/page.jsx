@@ -56,6 +56,14 @@ export default function LoginPage() {
           {loading ? <Spinner /> : 'Sign In'}
         </button>
 
+        <button
+          className="btn btn-secondary btn-full mt-2"
+          onClick={() => router.push('/scanner')}
+          disabled={loading}
+        >
+          ← Continue without signing in
+        </button>
+
         <div className="auth-switch">
           Don&apos;t have an account?{' '}
           <button onClick={() => router.push('/register')}>Create one</button>
