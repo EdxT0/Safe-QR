@@ -32,7 +32,7 @@ export default function RegisterPage() {
     <div className="auth-wrap">
       <div className="card auth-card">
         <div className="auth-logo">
-          <div className="auth-logo-icon">Q</div>
+          <div className="auth-logo-icon"><img src="/Safe_QR.jpg" alt="Safe QR logo" /></div>
           <div className="auth-title">Create account</div>
           <div className="auth-sub">Start scanning QR codes safely</div>
         </div>

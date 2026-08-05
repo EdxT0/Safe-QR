@@ -31,7 +31,7 @@ export default function LoginPage() {
     <div className="auth-wrap">
       <div className="card auth-card">
         <div className="auth-logo">
-          <div className="auth-logo-icon">Q</div>
+          <div className="auth-logo-icon"><img src="/Safe_QR.jpg" alt="Safe QR logo" /></div>
           <div className="auth-title">Welcome back</div>
           <div className="auth-sub">Sign in to access your scan history</div>
         </div>

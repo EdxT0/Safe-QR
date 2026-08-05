@@ -361,10 +361,11 @@ html, body {
 .auth-logo  { text-align: center; margin-bottom: 28px; }
 .auth-logo-icon {
   width: 52px; height: 52px; border-radius: 14px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  background: #fff; border: 1px solid var(--border); overflow: hidden;
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 12px;
+  margin-bottom: 12px;
 }
+.auth-logo-icon img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .auth-title  { font-size: 22px; font-weight: 700; letter-spacing: -0.4px; }
 .auth-sub    { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
 .auth-switch { text-align: center; margin-top: 18px; font-size: 13px; color: var(--text-muted); }
@@ -405,15 +406,15 @@ html, body {
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  background: #fff;
+  border: 1px solid var(--border);
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  font-weight: 800;
-  color: #fff;
   flex-shrink: 0;
 }
+.nav-logo-icon img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
 .nav-logo-text {
   font-size: 17px;

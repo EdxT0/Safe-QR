@@ -132,7 +132,7 @@ export function Navbar({ activePath }) {
     <nav className="nav">
       {/* Logo */}
       <Link href="/scanner" className="nav-logo">
-        <div className="nav-logo-icon">Q</div>
+        <div className="nav-logo-icon"><img src="/Safe_QR.jpg" alt="Safe QR logo" /></div>
         <div className="nav-logo-text">Safe<span>QR</span></div>
       </Link>
 
