@@ -169,6 +169,17 @@ export default function ResultPage() {
               />
             </div>
           </div>
+
+          {result.isSafe() && payloadType === 'url' && (
+            <a
+              href={payload}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary btn-full mt-4"
+            >
+              🌐 Proceed to Website
+            </a>
+          )}
         </div>
 
         {/* Analysis details */}

@@ -16,7 +16,13 @@ export async function apiFetch(path, { method = 'GET', body, signal } = {}) {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method,
     credentials: 'include',
-    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+    headers: {
+      // Skips ngrok's free-tier HTML interstitial, which would otherwise be
+      // returned in place of the real JSON response when the backend is
+      // tunnelled through an *.ngrok-free.app URL.
+      'ngrok-skip-browser-warning': 'true',
+      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+    },
     body: body !== undefined ? JSON.stringify(body) : undefined,
     signal,
   });

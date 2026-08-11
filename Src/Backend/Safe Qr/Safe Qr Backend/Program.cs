@@ -135,8 +135,11 @@ namespace Safe_Qr_Backend
                 app.MapOpenApi();
             }
 
-            app.UseHttpsRedirection();
-
+            // Not using UseHttpsRedirection(): when tunnelled through ngrok (or any
+            // reverse proxy that already terminates HTTPS at the edge), a forced
+            // local HTTP->HTTPS redirect breaks CORS preflight requests outright
+            // (redirects aren't allowed for OPTIONS preflights). Public traffic is
+            // still fully HTTPS via the tunnel/proxy either way.
             app.UseCors("Frontend");
 
             app.UseAuthentication();
