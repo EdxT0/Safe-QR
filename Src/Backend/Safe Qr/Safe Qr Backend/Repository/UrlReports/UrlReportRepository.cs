@@ -35,8 +35,9 @@ namespace Safe_Qr_Backend.Repository.UrlReports
             {
                 Url = url,
                 Results = aggregatedFinalResult,
-                FlaggedForWrong = false
-            }; 
+                FlaggedForWrong = false,
+                UpdatedAt = DateTimeOffset.UtcNow
+            };
             _appDbContext.UrlReport.Add(urlReport);
 
             try
@@ -57,6 +58,7 @@ namespace Safe_Qr_Backend.Repository.UrlReports
             if (existing != null)
             {
                 existing.Results = aggregatedFinalResult;
+                existing.UpdatedAt = DateTimeOffset.UtcNow;
 
                 try
                 {
@@ -68,7 +70,7 @@ namespace Safe_Qr_Backend.Repository.UrlReports
                     return Result<UrlReport>.Failure(ResultEnum.Failed);
                 }
             }
-            return Result<UrlReport>.Failure(ResultEnum.DoesNotExist); 
+            return Result<UrlReport>.Failure(ResultEnum.DoesNotExist);
 
         }
 
@@ -113,8 +115,8 @@ namespace Safe_Qr_Backend.Repository.UrlReports
 
         public async Task<Result<UrlThreatsAnalyticsDTO>> GetThreatsAnalyticsAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken ct)
         {
-            var result = await _appDbContext.UrlReport.Where(u => u.CreatedAt > from && u.CreatedAt < to)
-                                                    .GroupBy(u => new { Date = u.CreatedAt.Date, u.Results.ServiceResultEnum })
+            var result = await _appDbContext.UrlReport.Where(u => u.UpdatedAt > from && u.UpdatedAt < to)
+                                                    .GroupBy(u => new { Date = u.UpdatedAt.Date, u.Results.ServiceResultEnum })
                                                     .Select(g => new UrlThreatBucketDTO
                                                     {
                                                         Date = g.Key.Date,
@@ -124,7 +126,7 @@ namespace Safe_Qr_Backend.Repository.UrlReports
              var urlThreatsAnalytics = new UrlThreatsAnalyticsDTO
             {
                 DailyBreakdowns = result,
-                MaliciousCount = result.Count(r => r.Result == ServiceResultEnum.malicious),
+                MaliciousCount = result.Where(r => r.Result == ServiceResultEnum.malicious).Sum(r => r.Count),
                 TotalScanned = result.Sum(r => r.Count)
             };
 
@@ -143,7 +145,10 @@ namespace Safe_Qr_Backend.Repository.UrlReports
 
         public async Task<Result<List<UrlReport>>> GetAllUrlReportAsync(CancellationToken ct)
         {
-            var urlReportList = await _appDbContext.UrlReport.AsNoTracking().ToListAsync(ct);
+            var urlReportList = await _appDbContext.UrlReport
+                .AsNoTracking()
+                .OrderByDescending(u => u.UpdatedAt)
+                .ToListAsync(ct);
             return Result<List<UrlReport>>.Succeeded(urlReportList, ResultEnum.Successful);
         }
 

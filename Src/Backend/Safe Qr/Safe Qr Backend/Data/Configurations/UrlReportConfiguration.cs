@@ -36,6 +36,7 @@ namespace Safe_Qr_Backend.Data.Configurations
                 .HasDefaultValue(false);
 
             builder.Property(u => u.CreatedAt).IsRequired().HasDefaultValueSql("now()");
+            builder.Property(u => u.UpdatedAt).IsRequired().HasDefaultValueSql("now()");
 
             builder.Property(u => u.RowVersion).IsRowVersion();
 

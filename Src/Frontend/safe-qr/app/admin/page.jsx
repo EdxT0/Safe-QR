@@ -119,7 +119,8 @@ export default function AdminPage() {
     Url:             r.url,
     Verdict:         r.results?.serviceResultEnum,
     FlaggedForWrong: r.flaggedForWrong,
-    CreatedAt:       r.createdAt,
+    FirstScanned:    r.createdAt,
+    LastScanned:     r.updatedAt,
   })));
 
   const exportFeedbackCsv = () => downloadCsv('threat-feedback.csv', feedback.map(f => ({
@@ -216,9 +217,14 @@ export default function AdminPage() {
         <div className="card mt-4">
           <div className="flex-between" style={{ marginBottom: 12 }}>
             <div className="label" style={{ marginBottom: 0 }}>🌐 Threat Detection Reports</div>
-            <button className="btn btn-secondary btn-sm" onClick={exportReportsCsv} disabled={urlReports.length === 0}>
-              ⬇️ Export CSV
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-secondary btn-sm" onClick={loadReports} disabled={reportsLoading}>
+                {reportsLoading ? <Spinner /> : '🔄 Refresh'}
+              </button>
+              <button className="btn btn-secondary btn-sm" onClick={exportReportsCsv} disabled={urlReports.length === 0}>
+                ⬇️ Export CSV
+              </button>
+            </div>
           </div>
 
           {reportsError && <div className="error-msg">{reportsError}</div>}
@@ -235,7 +241,7 @@ export default function AdminPage() {
                     <th style={{ textAlign: 'left', padding: '8px 6px', color: 'var(--text-muted)' }}>URL</th>
                     <th style={{ textAlign: 'left', padding: '8px 6px', color: 'var(--text-muted)' }}>Verdict</th>
                     <th style={{ textAlign: 'left', padding: '8px 6px', color: 'var(--text-muted)' }}>Flagged</th>
-                    <th style={{ textAlign: 'left', padding: '8px 6px', color: 'var(--text-muted)' }}>Scanned</th>
+                    <th style={{ textAlign: 'left', padding: '8px 6px', color: 'var(--text-muted)' }}>Last Scanned</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -244,7 +250,7 @@ export default function AdminPage() {
                       <td style={{ padding: '8px 6px', wordBreak: 'break-all' }} title={r.url}>{truncate(r.url)}</td>
                       <td style={{ padding: '8px 6px' }}><Verdict value={r.results?.serviceResultEnum} /></td>
                       <td style={{ padding: '8px 6px' }}>{r.flaggedForWrong ? '🚩' : '—'}</td>
-                      <td style={{ padding: '8px 6px', color: 'var(--text-muted)' }}>{formatDate(r.createdAt)}</td>
+                      <td style={{ padding: '8px 6px', color: 'var(--text-muted)' }}>{formatDate(r.updatedAt)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -257,9 +263,14 @@ export default function AdminPage() {
         <div className="card mt-4">
           <div className="flex-between" style={{ marginBottom: 12 }}>
             <div className="label" style={{ marginBottom: 0 }}>📝 User Feedback</div>
-            <button className="btn btn-secondary btn-sm" onClick={exportFeedbackCsv} disabled={feedback.length === 0}>
-              ⬇️ Export CSV
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-secondary btn-sm" onClick={loadFeedback} disabled={feedbackLoading}>
+                {feedbackLoading ? <Spinner /> : '🔄 Refresh'}
+              </button>
+              <button className="btn btn-secondary btn-sm" onClick={exportFeedbackCsv} disabled={feedback.length === 0}>
+                ⬇️ Export CSV
+              </button>
+            </div>
           </div>
 
           {feedbackError && <div className="error-msg">{feedbackError}</div>}

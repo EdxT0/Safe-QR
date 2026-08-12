@@ -11,6 +11,7 @@ namespace Safe_Qr_Backend.Entities
 
         public bool FlaggedForWrong { get; set; } = false;
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+        public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 
         public uint RowVersion { get; set; }
     }
