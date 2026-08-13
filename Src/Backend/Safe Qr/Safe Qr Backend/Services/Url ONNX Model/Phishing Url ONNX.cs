@@ -4,7 +4,7 @@ using Safe_Qr_Backend.Result;
 using System.Runtime.CompilerServices;
 namespace Safe_Qr_Backend.Services
 {
-    public class Phishing_Url_ONNX
+    public class Phishing_Url_ONNX : IPhishingUrlOnnxService
     {
 
 
@@ -40,19 +40,23 @@ namespace Safe_Qr_Backend.Services
 
         }
 
-        private static ServiceScanResult GetServiceResultWithProb(float phishingProb, VendorEnum vendor)
+        internal const float SafeMaxThreshold = 0.40f;
+        internal const float SuspiciousMaxThreshold = 0.60f;
+        internal const float HighRiskMaxThreshold = 0.80f;
+
+        internal static ServiceScanResult GetServiceResultWithProb(float phishingProb, VendorEnum vendor)
         {
 
 
-            if (phishingProb <= 0.40)
+            if (phishingProb <= SafeMaxThreshold)
             {
                 return new ServiceScanResult(vendor, ServiceResultEnum.safe, [$"ONNX Model Phishing probability is around {phishingProb * 100}%"]);
             }
-            else if (phishingProb > 0.40 && phishingProb <= 0.60)
+            else if (phishingProb > SafeMaxThreshold && phishingProb <= SuspiciousMaxThreshold)
             {
                 return new ServiceScanResult(vendor, ServiceResultEnum.suspicious, [$"ONNX Model Phishing probability is around {phishingProb * 100}%"]);
             }
-            else if (phishingProb > 0.60 && phishingProb < 0.80)
+            else if (phishingProb > SuspiciousMaxThreshold && phishingProb < HighRiskMaxThreshold)
             {
                 return new ServiceScanResult(vendor, ServiceResultEnum.highRisk, [$"ONNX Model Phishing probability is around {phishingProb*100}%"]);
             }

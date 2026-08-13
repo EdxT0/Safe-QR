@@ -13,7 +13,7 @@ namespace Safe_Qr_Backend.Services.UrlScans
 {
     public class UrlScanService : IUrlScanService
     {
-        private readonly Phishing_Url_ONNX _phishingUrlONNXService;
+        private readonly IPhishingUrlOnnxService _phishingUrlONNXService;
         private readonly IUrlThreatEngineService _urlThreatEngineService;
         private readonly IGoogleSafeApiService _googleSafeApiService;
         private readonly IVirusTotalApiService _virusTotalApiService;
@@ -22,15 +22,35 @@ namespace Safe_Qr_Backend.Services.UrlScans
 
         private const int HighRiskConsensusCount = 2;
 
-        public UrlScanService(Phishing_Url_ONNX phishingUrlONNXService, IGoogleSafeApiService googleSafeApiService, IVirusTotalApiService virusTotalApiService, IUrlReportRepository urlReportRepository, IUrlThreatEngineService urlThreatEngineService)
+        public UrlScanService(IPhishingUrlOnnxService phishingUrlONNXService, IGoogleSafeApiService googleSafeApiService, IVirusTotalApiService virusTotalApiService, IUrlReportRepository urlReportRepository, IUrlThreatEngineService urlThreatEngineService)
         {
             _phishingUrlONNXService = phishingUrlONNXService;
             _googleSafeApiService = googleSafeApiService;
             _virusTotalApiService = virusTotalApiService;
             _urlReportRepository = urlReportRepository;
             _urlThreatEngineService = urlThreatEngineService;
+            // Order matters: the first strategy added is outermost. Fallback is added
+            // first so it's the last resort after Retry and CircuitBreaker have had a
+            // chance to run; Timeout is added last so it applies per individual attempt
+            // (innermost, closest to the actual call) rather than to the whole pipeline
+            // including retries.
             _pipeline = new ResiliencePipelineBuilder<AggregatedFinalResult>()
-                        .AddTimeout(TimeSpan.FromSeconds(5))
+                        .AddFallback(new FallbackStrategyOptions<AggregatedFinalResult>
+                        {
+                            ShouldHandle = new PredicateBuilder<AggregatedFinalResult>()
+                                        .Handle<HttpRequestException>()
+                                        .Handle<TimeoutRejectedException>()
+                                        .Handle<BrokenCircuitException>(),
+
+                            FallbackAction = async args =>
+                            {
+                                CancellationToken ct = args.Context.CancellationToken;
+                                var url = args.Context.Properties.GetValue(ResilienceKeys.Url, string.Empty);
+                                var result = await RunLocalFallbackAsync(url, ct);
+
+                                return Outcome.FromResult(result);
+                            }
+                        })
                         .AddRetry(new Polly.Retry.RetryStrategyOptions<AggregatedFinalResult>
                         {
                             MaxRetryAttempts = 2,
@@ -49,22 +69,8 @@ namespace Safe_Qr_Backend.Services.UrlScans
                             ShouldHandle = new PredicateBuilder<AggregatedFinalResult>()
                                             .Handle<HttpRequestException>()
                                             .Handle<TimeoutRejectedException>()
-                                            }).AddFallback(new FallbackStrategyOptions<AggregatedFinalResult>
-                        {
-                            ShouldHandle = new PredicateBuilder<AggregatedFinalResult>()
-                                        .Handle<HttpRequestException>()
-                                        .Handle<TimeoutRejectedException>()
-                                        .Handle<BrokenCircuitException>(),
-
-                            FallbackAction = async args =>
-                            {
-                                CancellationToken ct = args.Context.CancellationToken;
-                                var url = args.Context.Properties.GetValue(ResilienceKeys.Url, string.Empty);
-                                var result = await RunLocalFallbackAsync(url, ct);
-
-                                return Outcome.FromResult(result);
-                            }
                         })
+                        .AddTimeout(TimeSpan.FromSeconds(5))
                         .Build();
         }
 

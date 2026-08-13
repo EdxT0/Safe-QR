@@ -3,5 +3,6 @@
     <File Path=".editorconfig" />
     <File Path="appsettings.development.json" />
   </Folder>
+  <Project Path="Safe Qr Backend.Tests/Safe Qr Backend.Tests.csproj" />
   <Project Path="Safe Qr Backend/Safe Qr Backend.csproj" />
 </Solution>

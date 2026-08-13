@@ -97,7 +97,7 @@ namespace Safe_Qr_Backend
             builder.Services.AddScoped<PasswordHasher<Safe_Qr_Backend.Entities.User>>();
             builder.Services.AddScoped<Safe_Qr_Backend.Services.Auth.IAuthService, Safe_Qr_Backend.Services.Auth.AuthService>();
 
-            builder.Services.AddScoped<Phishing_Url_ONNX>();
+            builder.Services.AddScoped<IPhishingUrlOnnxService, Phishing_Url_ONNX>();
             builder.Services.AddScoped<IUrlThreatEngineService, UrlThreatEngineService>();
             builder.Services.AddHttpClient<IGoogleSafeApiService, GoogleSafeApiService>((sp, client) =>
             {
